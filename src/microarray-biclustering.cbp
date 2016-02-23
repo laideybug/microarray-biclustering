@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6" />
+	<Project>
+		<Option title="microarray-biclustering" />
+		<Option pch_mode="2" />
+		<Option default_target="Debug" />
+		<Option compiler="gcc" />
+		<Build>
+			<Target title="Debug">
+				<Option platforms="Unix;" />
+				<Option output="bin/Debug/microarray_biclustering" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Debug/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-g" />
+				</Compiler>
+				<Linker>
+					<Add library="/opt/adapteva/esdk/tools/host/lib/libe-hal.so" />
+					<Add library="/opt/adapteva/esdk/tools/host/lib/libe-loader.so" />
+					<Add directory="/opt/adapteva/esdk/tools/host/lib" />
+				</Linker>
+			</Target>
+			<Target title="EDebug">
+				<Option platforms="Unix;" />
+				<Option output="bin/Debug/e_microarray_biclustering" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Debug/" />
+				<Option type="1" />
+				<Option compiler="e-gcc" />
+				<Option use_console_runner="0" />
+				<Linker>
+					<Add library="/opt/adapteva/esdk/tools/e-gnu/epiphany-elf/lib/libe-lib.a" />
+				</Linker>
+				<ExtraCommands>
+					<Add after="e-objcopy --srec-forceS3 --output-target srec ./bin/Debug/e_microarray_biclustering ./bin/Debug/e_microarray_biclustering.srec" />
+					<Mode after="always" />
+				</ExtraCommands>
+			</Target>
+		</Build>
+		<VirtualTargets>
+			<Add alias="All" targets="Debug;EDebug;" />
+		</VirtualTargets>
+		<Compiler>
+			<Add option="-Wall" />
+		</Compiler>
+		<Unit filename="e_microarray_biclustering.c">
+			<Option compilerVar="CC" />
+			<Option target="EDebug" />
+		</Unit>
+		<Unit filename="microarray_biclustering.c">
+			<Option compilerVar="CC" />
+			<Option target="Debug" />
+		</Unit>
+		<Extensions>
+			<code_completion />
+			<debugger />
+		</Extensions>
+	</Project>
+</CodeBlocks_project_file>
