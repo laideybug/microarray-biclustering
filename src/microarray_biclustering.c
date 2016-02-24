@@ -28,12 +28,12 @@ int main(int argc, char *argv[]) {
 
             // data.txt is in 12625 x 56 format,
             // therefore we need to model it as
-            // an 56 x 12625 matrix
-            if (current_row == IN_ROWS) {
+            // a 56 x 12625 matrix
+            if (current_row < (IN_ROWS - 1)) {
+                current_row++;
+            } else {
                 current_row = 0;
                 current_col++;
-            } else {
-                current_row++;
             }
         }
 
