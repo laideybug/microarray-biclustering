@@ -1,15 +1,23 @@
+#include <complex.h>
+#include <e-hal.h>
+#include <e-loader.h>
+#include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
-#include <e-hal.h>
-
 #define IN_ROWS 56
 #define IN_COLS 12625
 #define N 3
+#define PI 3.141592654
 
+float gaussRand();
+void scalarMultiply(size_t rows, size_t cols, float matrix[rows][cols], float num);
 void fill(size_t rows, size_t cols, float matrix[rows][cols], float num);
+void fillRandom(size_t rows, size_t cols, float matrix[rows][cols]);
 void mean(size_t rows, size_t cols, float matrix[rows][cols], float mean_vector[cols]);
+void sum(size_t rows, size_t cols, float matrix[rows][cols], float sum_vector[cols]);
+void square(size_t rows, size_t cols, float matrix[rows][cols]);
 void removeDC(size_t rows, size_t cols, float matrix[rows][cols]);
 
 int main(int argc, char *argv[]) {
@@ -39,12 +47,110 @@ int main(int argc, char *argv[]) {
 
         fclose(file);
     } else {
-        printf("Error: unable to open input file.\n");
+        printf("Failed to open input file.\n");
+        return EXIT_FAILURE;
     }
 
+    // Remove DC component from input data
     removeDC(IN_ROWS, IN_COLS, input_data);
 
-	return 0;
+    float update_matrix[IN_ROWS][N];
+    fill(IN_ROWS, N, update_matrix, 0.0f);
+
+    float random_matrix[IN_ROWS][N];
+    srand(1);
+    fillRandom(IN_ROWS, N, random_matrix);
+    scalarMultiply(IN_ROWS, N, random_matrix, 10.0f);
+
+    float t_random_matrix[IN_ROWS][N] = random_matrix;
+    square(IN_ROWS, N, t_random_matrix);
+
+    float sum_vector[N];
+    sum(IN_ROWS, N, t_random_matrix, sum_vector);
+
+    // TODO - complex sqrt & @rdivision
+
+    // Epiphany setup
+    e_platform_t platform;
+	e_epiphany_t dev;
+
+    e_init(NULL);
+	e_reset_system();
+	e_get_platform_info(&platform);
+
+	e_set_loader_verbosity(L_D0);
+	e_set_host_verbosity(H_D0);
+
+    // Open a 1 x N workgroup
+	e_open(&dev, 0, 0, 1, N);
+    e_reset_group(&dev);
+
+    for (int i = 0; i < N; ++i) {
+        if (e_load("./bin/Debug/e_microarray_biclustering.srec", &dev, 0, i, E_TRUE) != E_OK) {
+			printf("Failed to load e_microarray_biclustering.srec\n");
+			return EXIT_FAILURE;
+		}
+    }
+
+    e_close(&dev);
+    e_finalize();
+
+	return EXIT_SUCCESS;
+}
+
+/*
+* Function: gaussRand
+* -------------------
+* Returns a normally distributed
+* floating-point random number
+*
+* Reference: Abramowitz and Stegun
+*            Handbook of Mathematical Functions
+*
+*            Press et al., Numerical Recipes in C
+*            Sec. 7.2 pp. 288-290
+*
+*            c-faq.com/lib/gaussian.html
+*
+*/
+
+float gaussRand() {
+    static float U, V;
+    static int phase = 0;
+    float Z;
+
+    if (phase == 0) {
+        U = (rand() + 1.0f) / (RAND_MAX + 2.0f);
+        V = rand() / (RAND_MAX + 1.0f);
+        Z = sqrt(-2 * log(U)) * sin(2 * PI * V);
+    } else {
+        Z = sqrt(-2 * log(U)) * cos(2 * PI * V);
+    }
+
+    phase = 1 - phase;
+
+    return Z;
+}
+
+/*
+* Function: scalarMultiply
+* ------------------------
+* Multiplies all elements of a matrix
+* by a given scalar value
+*
+* rows: the number of rows in matrix
+* cols: the number of columns in matrix
+* matrix: the input matrix
+* num: the scalar multiplier
+*
+*/
+
+void scalarMultiply(size_t rows, size_t cols, float matrix[rows][cols], float num) {
+    for (int j = 0; j < rows; ++j) {
+        for (int k = 0; k < cols; ++k) {
+            matrix[j][k] *= num;
+        }
+    }
 }
 
 /*
@@ -63,6 +169,27 @@ void fill(size_t rows, size_t cols, float matrix[rows][cols], float num) {
     for (int j = 0; j < rows; ++j) {
         for (int k = 0; k < cols; ++k) {
             matrix[j][k] = num;
+        }
+    }
+}
+
+/*
+* Function: fillRandom
+* --------------------
+* Fills a matrix with normally distributed
+* random numbers
+*
+* rows: the number of rows in matrix
+* cols: the number of columns in matrix
+* matrix: the input matrix
+*
+*/
+
+void fillRandom(size_t rows, size_t cols, float matrix[rows][cols]) {
+    for (int j = 0; j < rows; ++j) {
+        for (int k = 0; k < cols; ++k) {
+            float rand_num = gaussRand();
+            matrix[j][k] = rand_num;
         }
     }
 }
@@ -92,6 +219,81 @@ void mean(size_t rows, size_t cols, float matrix[rows][cols], float mean_vector[
 
         float mean = column_total / rows;
         mean_vector[j] = mean;
+    }
+}
+
+/*
+* Function: sum
+* -------------
+* Sums each column of a matrix and stores the result
+* in a given row vector
+*
+* rows: the number of rows in matrix
+* cols: the number of columns in matrix
+* matrix: the input matrix
+* sum_vector: the row vector to store the summed values
+*
+*/
+
+void sum(size_t rows, size_t cols, float matrix[rows][cols], float sum_vector[cols]) {
+    float column_total;
+
+    for (int j = 0; j < cols; ++j) {
+        column_total = 0.0f;
+
+        for (int k = 0; k < rows; ++k) {
+            column_total += matrix[k][j];
+        }
+
+        sum_vector[j] = column_total;
+    }
+}
+
+/*
+* Function: square
+* ----------------
+* Squares each element of the input matrix
+*
+* rows: the number of rows in matrix
+* cols: the number of columns in matrix
+* matrix: the input matrix
+*
+*/
+
+void square(size_t rows, size_t cols, float matrix[rows][cols]) {
+    for (int j = 0; j < rows; ++j) {
+        for (int k = 0; k < cols; ++k) {
+            float element = matrix[j][k];
+            matrix[j][k] = pow(element, 2);
+        }
+    }
+}
+
+/*
+* Function: squareRoot
+* --------------------
+* Finds the square root of each element of
+* the input matrix
+*
+* rows: the number of rows in matrix
+* cols: the number of columns in matrix
+* matrix: the input matrix
+*
+*/
+
+void squareRoot(size_t rows, size_t cols, complex float matrix[rows][cols]) {
+    for (int j = 0; j < rows; ++j) {
+        for (int k = 0; k < cols; ++k) {
+            float element = matrix[j][k];
+
+            if (element < 0) {
+                matrix[j][k] = csqrt(element);
+            } else {
+                matrix[j][k] = sqrt(element);
+            }
+
+            matrix[j][k] = sqrt(element);
+        }
     }
 }
 
