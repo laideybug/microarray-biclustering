@@ -18,11 +18,15 @@ void fillRandom(size_t rows, size_t cols, float matrix[rows][cols]);
 void mean(size_t rows, size_t cols, float matrix[rows][cols], float mean_vector[cols]);
 void sum(size_t rows, size_t cols, float matrix[rows][cols], float sum_vector[cols]);
 void square(size_t rows, size_t cols, float matrix[rows][cols]);
+void squareRootComplex(size_t rows, size_t cols, complex float _Complex matrix[rows][cols]);
 void removeDC(size_t rows, size_t cols, float matrix[rows][cols]);
+void initDictionaries(size_t rows, size_t cols, float _Complex update_dictionary[rows][cols], float _Complex dictionary[row][cols]);
 
 int main(int argc, char *argv[]) {
     float input_data[IN_ROWS][IN_COLS];
+    srand(1);
 
+    // Read input data
     FILE *file;
     file = fopen("data.txt", "r");
 
@@ -51,24 +55,13 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    // Remove DC component from input data
+    // Remove DC component from input data (i.e. centering)
     removeDC(IN_ROWS, IN_COLS, input_data);
 
-    float update_matrix[IN_ROWS][N];
-    fill(IN_ROWS, N, update_matrix, 0.0f);
-
-    float random_matrix[IN_ROWS][N];
-    srand(1);
-    fillRandom(IN_ROWS, N, random_matrix);
-    scalarMultiply(IN_ROWS, N, random_matrix, 10.0f);
-
-    float t_random_matrix[IN_ROWS][N] = random_matrix;
-    square(IN_ROWS, N, t_random_matrix);
-
-    float sum_vector[N];
-    sum(IN_ROWS, N, t_random_matrix, sum_vector);
-
-    // TODO - complex sqrt & @rdivision
+    // Initialise the dictionaries
+    float _Complex update_w[IN_ROWS][N];
+    float _Complex dictionary_w[IN_ROWS][N];
+    initDictionaries(IN_ROWS, N, update_w, dictionary_w);
 
     // Epiphany setup
     e_platform_t platform;
@@ -85,12 +78,18 @@ int main(int argc, char *argv[]) {
 	e_open(&dev, 0, 0, 1, N);
     e_reset_group(&dev);
 
+    // Load the device code into each core of the workgroup, but do not start immediately
     for (int i = 0; i < N; ++i) {
-        if (e_load("./bin/Debug/e_microarray_biclustering.srec", &dev, 0, i, E_TRUE) != E_OK) {
+        if (e_load("./bin/Debug/e_microarray_biclustering.srec", &dev, 0, i, E_FALSE) != E_OK) {
 			printf("Failed to load e_microarray_biclustering.srec\n");
 			return EXIT_FAILURE;
 		}
     }
+
+    // TODO: Load individual dictionary atoms into each core
+
+    // Start all of the cores
+    e_start_group(&dev);
 
     e_close(&dev);
     e_finalize();
@@ -107,8 +106,8 @@ int main(int argc, char *argv[]) {
 * Reference: Abramowitz and Stegun
 *            Handbook of Mathematical Functions
 *
-*            Press et al., Numerical Recipes in C
-*            Sec. 7.2 pp. 288-290
+*            S. Summit, C Programming FAQs: Frequently Asked Questions
+*            Addison-Wesley, 1995, ISBN 0-201-84519-9
 *
 *            c-faq.com/lib/gaussian.html
 *
@@ -270,29 +269,23 @@ void square(size_t rows, size_t cols, float matrix[rows][cols]) {
 }
 
 /*
-* Function: squareRoot
-* --------------------
+* Function: squareRootComplex
+* ---------------------------
 * Finds the square root of each element of
 * the input matrix
 *
 * rows: the number of rows in matrix
 * cols: the number of columns in matrix
 * matrix: the input matrix
+* sqrt_matrix: the output matrix
 *
 */
 
-void squareRoot(size_t rows, size_t cols, complex float matrix[rows][cols]) {
+void squareRootComplex(size_t rows, size_t cols, float matrix[rows][cols], float _Complex sqrt_matrix[rows][cols]) {
     for (int j = 0; j < rows; ++j) {
         for (int k = 0; k < cols; ++k) {
-            float element = matrix[j][k];
-
-            if (element < 0) {
-                matrix[j][k] = csqrt(element);
-            } else {
-                matrix[j][k] = sqrt(element);
-            }
-
-            matrix[j][k] = sqrt(element);
+            float _Complex element = (float _Complex)matrix[j][k];
+            sqrt_matrix[j][k] = csqrtf(element);
         }
     }
 }
@@ -328,6 +321,48 @@ void removeDC(size_t rows, size_t cols, float matrix[rows][cols]) {
     for (int j = 0; j < rows; ++j) {
         for (int k = 0; k < cols; ++k) {
             matrix[j][k] -= mult_matrix[j][k];
+        }
+    }
+}
+
+/*
+* Function: initDictionaries
+* --------------------------
+* Initialises the full dictionary and full
+* update dictionary
+*
+* rows: the number of rows in matrix
+* cols: the number of columns in matrix
+* update_dictionary: the "update" dictionary
+* dictionary: the dictionary
+*
+*/
+
+void initDictionaries(size_t rows, size_t cols, float _Complex update_dictionary[rows][cols], float _Complex dictionary[row][cols]) {
+    float temp_update_dictionary[rows][cols];
+    fill(rows, cols, temp_update_dictionary, 0.0f);
+
+    // Convert to float _Complex
+    for (int j = 0; j < rows; ++j) {
+        for (int k = 0; k < cols; ++k) {
+            update_dictionary[j][k] = (float _Complex)temp_update_dictionary[j][k];
+        }
+    }
+
+    float temp_dictionary[rows][cols];
+    fillRandom(rows, cols, temp_dictionary);
+    scalarMultiply(rows, cols, temp_dictionary, 10.0f);
+    square(rows, cols, temp_dictionary);
+
+    float sum_vector[1][cols];  // 1 x 3
+    sum(rows, cols, temp_dictionary, sum_vector);
+
+    float _Complex sqrt_vector[1][cols];
+    squareRootComplex(1, cols, sum_vector, sqrt_vector); 
+
+    for (int j = 0; j < rows; ++j) {
+        for (int k = 0; k < cols; ++k) {
+            dictionary[j][k] = temp_dictionary[j][k] / sqrt_vector[0][k];
         }
     }
 }
