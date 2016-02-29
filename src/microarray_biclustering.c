@@ -21,6 +21,8 @@ void square(size_t rows, size_t cols, float matrix[rows][cols]);
 void squareRootComplex(size_t rows, size_t cols, complex float _Complex matrix[rows][cols]);
 void removeDC(size_t rows, size_t cols, float matrix[rows][cols]);
 void initDictionaries(size_t rows, size_t cols, float _Complex update_dictionary[rows][cols], float _Complex dictionary[row][cols]);
+void getColumn(size_t rows, size_t cols, int column_index, float matrix[rows][cols], float column[rows]);
+void getColumnComplex(size_t rows, size_t cols, int column_index, float _Complex matrix[rows][cols], float _Complex column[rows]);
 
 int main(int argc, char *argv[]) {
     float input_data[IN_ROWS][IN_COLS];
@@ -70,6 +72,8 @@ int main(int argc, char *argv[]) {
     e_init(NULL);
 	e_reset_system();
 	e_get_platform_info(&platform);
+    unsigned clr;
+    clr = (unsigned)0x00000000;
 
 	e_set_loader_verbosity(L_D0);
 	e_set_host_verbosity(H_D0);
@@ -78,15 +82,29 @@ int main(int argc, char *argv[]) {
 	e_open(&dev, 0, 0, 1, N);
     e_reset_group(&dev);
 
-    // Load the device code into each core of the workgroup, but do not start immediately
+    // xt
+    float xt[IN_ROWS];
+    getColumn(IN_ROWS, IN_COLS, 0, input_data, xt);
+
+    // Load the first input sample, and respective dictionary atoms into each core
     for (int i = 0; i < N; ++i) {
-        if (e_load("./bin/Debug/e_microarray_biclustering.srec", &dev, 0, i, E_FALSE) != E_OK) {
-			printf("Failed to load e_microarray_biclustering.srec\n");
-			return EXIT_FAILURE;
-		}
+        float _Complex dictionary_wk[IN_ROWS];
+        getColumnComplex(IN_ROWS, N, i, dictionary_w, dictionary_wk);
+        
+        float _Complex update_wk[IN_ROWS];
+        getColumnComplex(IN_ROWS, N, i, update_w, update_wk);
+
+        e_write(&dev, 0, i, 0x2000, &xt, IN_ROWS*sizeof(float));
+        e_write(&dev, 0, i, 0x4000, &dictionary_wk, IN_ROWS*sizeof(float _Complex));
+        e_write(&dev, 0, i, 0x5000, &update_wk, IN_ROWS*sizeof(float _Complex));
+        e_write(&dev, 0, i, 0x7000, &clr, sizeof(clr));
     }
 
-    // TODO: Load individual dictionary atoms into each core
+    // Load program to the workgroup and run
+    if (e_load_group("./bin/Debug/e_microarray_biclustering.srec", &dev, 0, 0, 1, N, E_TRUE) != E_OK) {
+        printf("Failed to load e_microarray_biclustering.srec\n");
+        return EXIT_FAILURE;
+    }
 
     // Start all of the cores
     e_start_group(&dev);
@@ -364,5 +382,45 @@ void initDictionaries(size_t rows, size_t cols, float _Complex update_dictionary
         for (int k = 0; k < cols; ++k) {
             dictionary[j][k] = temp_dictionary[j][k] / sqrt_vector[0][k];
         }
+    }
+}
+
+/*
+* Function: getColumn
+* -------------------
+* Retrieves a specified column from a matrix
+* and assigns it to a column vector
+*
+* rows: the number of rows in matrix
+* cols: the number of columns in matrix
+* column_index: the index of the column to be retrieved
+* matrix: the input matrix
+* column: the vector to store the retrieved column in
+*
+*/
+
+void getColumn(size_t rows, size_t cols, int column_index, float matrix[rows][cols], float column[rows]) {
+    for (int i = 0; i < rows; ++i) {
+        column[i] = matrix[i][column_index];
+    }
+}
+
+/*
+* Function: getColumnComplex
+* --------------------------
+* Retrieves a specified column from matrix
+* and assigns it to a column vector
+*
+* rows: the number of rows in matrix
+* cols: the number of columns in matrix
+* column_index: the index of the column to be retrieved
+* matrix: the input matrix
+* column: the vector to store the retrieved column in
+*
+*/
+
+void getColumnComplex(size_t rows, size_t cols, int column_index, float _Complex matrix[rows][cols], float _Complex column[rows]) {
+    for (int i = 0; i < rows; ++i) {
+        column[i] = matrix[i][column_index];
     }
 }
