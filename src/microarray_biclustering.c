@@ -8,8 +8,9 @@
 
 float gaussRand();
 void scalarMultiply(size_t rows, size_t cols, float matrix[rows][cols], float num);
-void fill(size_t rows, size_t cols, float matrix[rows][cols], float num);
-void fillRandom(size_t rows, size_t cols, float matrix[rows][cols]);
+void fillMatrix(size_t rows, size_t cols, float matrix[rows][cols], float num);
+void fillMatrixRandom(size_t rows, size_t cols, float matrix[rows][cols]);
+void fillVector(size_t length, float vector[length], float num);
 void mean(size_t rows, size_t cols, float matrix[rows][cols], float mean_vector[cols]);
 void sum(size_t rows, size_t cols, float matrix[rows][cols], float sum_vector[cols]);
 void square(size_t rows, size_t cols, float matrix[rows][cols]);
@@ -89,9 +90,16 @@ int main(int argc, char *argv[]) {
         float update_wk[IN_ROWS];
         getColumn(IN_ROWS, N, i, update_w, update_wk);
 
+        float dual_var[IN_ROWS];
+        fillVector(IN_ROWS, dual_var, 0.0f);
+
         e_write(&dev, 0, i, 0x2000, &xt, IN_ROWS*sizeof(float));
         e_write(&dev, 0, i, 0x3000, &dictionary_wk, IN_ROWS*sizeof(float));
         e_write(&dev, 0, i, 0x4000, &update_wk, IN_ROWS*sizeof(float));
+        e_write(&dev, 0, i, 0x4600, &dual_var, IN_ROWS*sizeof(float));
+        e_write(&dev, 0, i, 0x5000, &dual_var, IN_ROWS*sizeof(float));
+        e_write(&dev, 0, i, 0x5300, &dual_var, IN_ROWS*sizeof(float));
+        e_write(&dev, 0, i, 0x5600, &dual_var, IN_ROWS*sizeof(float));
         e_write(&dev, 0, i, 0x7000, &clr, sizeof(clr));
     }
 
@@ -167,8 +175,8 @@ void scalarMultiply(size_t rows, size_t cols, float matrix[rows][cols], float nu
 }
 
 /*
-* Function: fill
-* --------------
+* Function: fillMatrix
+* --------------------
 * Fills a matrix with a given number
 *
 * rows: the number of rows in matrix
@@ -178,7 +186,7 @@ void scalarMultiply(size_t rows, size_t cols, float matrix[rows][cols], float nu
 *
 */
 
-void fill(size_t rows, size_t cols, float matrix[rows][cols], float num) {
+void fillMatrix(size_t rows, size_t cols, float matrix[rows][cols], float num) {
     for (int j = 0; j < rows; ++j) {
         for (int k = 0; k < cols; ++k) {
             matrix[j][k] = num;
@@ -187,8 +195,8 @@ void fill(size_t rows, size_t cols, float matrix[rows][cols], float num) {
 }
 
 /*
-* Function: fillRandom
-* --------------------
+* Function: fillMatrixRandom
+* --------------------------
 * Fills a matrix with normally distributed
 * random numbers
 *
@@ -198,12 +206,29 @@ void fill(size_t rows, size_t cols, float matrix[rows][cols], float num) {
 *
 */
 
-void fillRandom(size_t rows, size_t cols, float matrix[rows][cols]) {
+void fillMatrixRandom(size_t rows, size_t cols, float matrix[rows][cols]) {
     for (int j = 0; j < rows; ++j) {
         for (int k = 0; k < cols; ++k) {
             float rand_num = gaussRand();
             matrix[j][k] = rand_num;
         }
+    }
+}
+
+/*
+* Function: fillVector
+* --------------------
+* Fills a vector with a given number
+*
+* length: the number of elements in vector
+* vector: the input vector
+* num: the number to fill the vector with
+*
+*/
+
+void fillVector(size_t length, float vector[length], float num) {
+    for (int i = 0; i < length; ++i) {
+        vector[i] = num;
     }
 }
 
@@ -312,10 +337,9 @@ void squareRootMatrix(size_t rows, size_t cols, float matrix[rows][cols], float 
 * the input vector and places the results
 * in an output vector
 *
-* rows: the number of rows in matrix
-* cols: the number of columns in matrix
-* matrix: the input matrix
-* sqrt_matrix: the output matrix
+* length: the number of elements in vector
+* vector: the input vector
+* sqrt_vector: the output vector
 *
 */
 
@@ -338,8 +362,8 @@ void squareRootVector(size_t length, float vector[length], float sqrt_vector[len
 */
 
 void removeDC(size_t rows, size_t cols, float matrix[rows][cols]) {
-    float ones_vector[rows][1];     // 56 x 1
-    fill(rows, 1, ones_vector, 1.0f);
+    float ones_vector[rows];     // 56 x 1
+    fillVector(rows, ones_vector, 1.0f);
 
     float mean_vector[cols];        // 1 x 12625
     mean(rows, cols, matrix, mean_vector);
@@ -349,7 +373,7 @@ void removeDC(size_t rows, size_t cols, float matrix[rows][cols]) {
     // Multiplication
     for (int j = 0; j < rows; ++j) {
         for (int k = 0; k < cols; ++k) {
-            mult_matrix[j][k] = ones_vector[j][0] * mean_vector[k];
+            mult_matrix[j][k] = ones_vector[j] * mean_vector[k];
         }
     }
 
@@ -375,10 +399,10 @@ void removeDC(size_t rows, size_t cols, float matrix[rows][cols]) {
 */
 
 void initDictionaries(size_t rows, size_t cols, float update_dictionary[rows][cols], float dictionary[rows][cols]) {
-    fill(rows, cols, update_dictionary, 0.0f);
+    fillMatrix(rows, cols, update_dictionary, 0.0f);
 
     float temp_dictionary[rows][cols];
-    fillRandom(rows, cols, temp_dictionary);
+    fillMatrixRandom(rows, cols, temp_dictionary);
     scalarMultiply(rows, cols, temp_dictionary, 10.0f);
     square(rows, cols, temp_dictionary);
 

@@ -44,6 +44,7 @@
 		<Compiler>
 			<Add option="-Wall" />
 		</Compiler>
+		<Unit filename="common.h" />
 		<Unit filename="e_microarray_biclustering.c">
 			<Option compilerVar="CC" />
 			<Option target="EDebug" />
@@ -51,6 +52,13 @@
 		<Unit filename="microarray_biclustering.c">
 			<Option compilerVar="CC" />
 			<Option target="Debug" />
+		</Unit>
+		<Unit filename="static_buffers.c">
+			<Option compilerVar="CC" />
+			<Option target="EDebug" />
+		</Unit>
+		<Unit filename="static_buffers.h">
+			<Option target="EDebug" />
 		</Unit>
 		<Extensions>
 			<code_completion />
