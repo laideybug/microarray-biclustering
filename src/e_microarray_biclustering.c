@@ -10,7 +10,7 @@
 #define MU_W 0.005
 #define GAMMA 0.5
 #define DELTA 0.1
-#define MU_2 0.01 
+#define MU_2 0.01
 #define ALPHA 0
 #define NUM_ITER 2000
 #define ALPHA_W 0
@@ -20,8 +20,8 @@ void adjustScaling(float scaling);
 void mean();
 
 int main(void) {
-	unsigned *a, *b, *c, *d;
-	int i, j, k, reps;
+	unsigned *xt, *wk, *up_k, *nu_k, *done_flag;
+	int i, reps;
 	float nu[IN_ROWS], subgrad[IN_ROWS];
 	float scaling = 0.0f;
 
@@ -68,7 +68,7 @@ int main(void) {
     	// SYNCH
 
 		for (i = 0; i < IN_ROWS; ++i) {
-			nu[i] = nu[i] + subgrad[i] + 
+			// nu[i] = nu[i] + subgrad[i] +
 		}
 	}
 
@@ -81,7 +81,7 @@ int main(void) {
 
 	// Raising "done" flag
    	(*(done_flag)) = 0x00000001;
- 
+
    	// Put core in idle state
    	__asm__ __volatile__("idle");
 }

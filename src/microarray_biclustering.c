@@ -19,7 +19,7 @@ void sum(size_t rows, size_t cols, float matrix[rows][cols], float sum_vector[co
 void square(size_t rows, size_t cols, float matrix[rows][cols]);
 void squareRoot(size_t rows, size_t cols, float matrix[rows][cols], float sqrt_matrix[rows][cols]);
 void removeDC(size_t rows, size_t cols, float matrix[rows][cols]);
-void initDictionaries(size_t rows, size_t cols, float update_dictionary[rows][cols], float dictionary[row][cols]);
+void initDictionaries(size_t rows, size_t cols, float update_dictionary[rows][cols], float dictionary[rows][cols]);
 void getColumn(size_t rows, size_t cols, int column_index, float matrix[rows][cols], float column[rows]);
 
 int main(int argc, char *argv[]) {
@@ -88,7 +88,7 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < N; ++i) {
         float dictionary_wk[IN_ROWS];
         getColumn(IN_ROWS, N, i, dictionary_w, dictionary_wk);
-        
+
         float update_wk[IN_ROWS];
         getColumn(IN_ROWS, N, i, update_w, update_wk);
 
@@ -355,7 +355,7 @@ void removeDC(size_t rows, size_t cols, float matrix[rows][cols]) {
 *
 */
 
-void initDictionaries(size_t rows, size_t cols, float update_dictionary[rows][cols], float dictionary[row][cols]) {
+void initDictionaries(size_t rows, size_t cols, float update_dictionary[rows][cols], float dictionary[rows][cols]) {
     fill(rows, cols, update_dictionary, 0.0f);
 
     float temp_dictionary[rows][cols];
@@ -367,7 +367,7 @@ void initDictionaries(size_t rows, size_t cols, float update_dictionary[rows][co
     sum(rows, cols, temp_dictionary, sum_vector);
 
     float sqrt_vector[1][cols];
-    squareRoot(1, cols, sum_vector, sqrt_vector); 
+    squareRoot(1, cols, sum_vector, sqrt_vector);
 
     for (int j = 0; j < rows; ++j) {
         for (int k = 0; k < cols; ++k) {
