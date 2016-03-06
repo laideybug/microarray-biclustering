@@ -1,14 +1,10 @@
+#include <common.h>
 #include <e-hal.h>
 #include <e-loader.h>
 #include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-
-#define IN_ROWS 56
-#define IN_COLS 12625
-#define N 3
-#define PI 3.141592654
 
 float gaussRand();
 void scalarMultiply(size_t rows, size_t cols, float matrix[rows][cols], float num);
@@ -17,7 +13,8 @@ void fillRandom(size_t rows, size_t cols, float matrix[rows][cols]);
 void mean(size_t rows, size_t cols, float matrix[rows][cols], float mean_vector[cols]);
 void sum(size_t rows, size_t cols, float matrix[rows][cols], float sum_vector[cols]);
 void square(size_t rows, size_t cols, float matrix[rows][cols]);
-void squareRoot(size_t rows, size_t cols, float matrix[rows][cols], float sqrt_matrix[rows][cols]);
+void squareRootMatrix(size_t rows, size_t cols, float matrix[rows][cols], float sqrt_matrix[rows][cols]);
+void squareRootVector(size_t length, float vector[length], float sqrt_vector[length]);
 void removeDC(size_t rows, size_t cols, float matrix[rows][cols]);
 void initDictionaries(size_t rows, size_t cols, float update_dictionary[rows][cols], float dictionary[rows][cols]);
 void getColumn(size_t rows, size_t cols, int column_index, float matrix[rows][cols], float column[rows]);
@@ -93,8 +90,8 @@ int main(int argc, char *argv[]) {
         getColumn(IN_ROWS, N, i, update_w, update_wk);
 
         e_write(&dev, 0, i, 0x2000, &xt, IN_ROWS*sizeof(float));
-        e_write(&dev, 0, i, 0x4000, &dictionary_wk, IN_ROWS*sizeof(float));
-        e_write(&dev, 0, i, 0x5000, &update_wk, IN_ROWS*sizeof(float));
+        e_write(&dev, 0, i, 0x3000, &dictionary_wk, IN_ROWS*sizeof(float));
+        e_write(&dev, 0, i, 0x4000, &update_wk, IN_ROWS*sizeof(float));
         e_write(&dev, 0, i, 0x7000, &clr, sizeof(clr));
     }
 
@@ -286,10 +283,11 @@ void square(size_t rows, size_t cols, float matrix[rows][cols]) {
 }
 
 /*
-* Function: squareRoot
-* --------------------
+* Function: squareRootMatrix
+* --------------------------
 * Finds the square root of each element of
-* the input matrix
+* the input matrix and places the results
+* in an output matrix
 *
 * rows: the number of rows in matrix
 * cols: the number of columns in matrix
@@ -298,12 +296,33 @@ void square(size_t rows, size_t cols, float matrix[rows][cols]) {
 *
 */
 
-void squareRoot(size_t rows, size_t cols, float matrix[rows][cols], float sqrt_matrix[rows][cols]) {
+void squareRootMatrix(size_t rows, size_t cols, float matrix[rows][cols], float sqrt_matrix[rows][cols]) {
     for (int j = 0; j < rows; ++j) {
         for (int k = 0; k < cols; ++k) {
             float element = matrix[j][k];
             sqrt_matrix[j][k] = sqrt(element);
         }
+    }
+}
+
+/*
+* Function: squareRootVector
+* --------------------------
+* Finds the square root of each element of
+* the input vector and places the results
+* in an output vector
+*
+* rows: the number of rows in matrix
+* cols: the number of columns in matrix
+* matrix: the input matrix
+* sqrt_matrix: the output matrix
+*
+*/
+
+void squareRootVector(size_t length, float vector[length], float sqrt_vector[length]) {
+    for (int i = 0; i < length; ++i) {
+        float element = vector[i];
+        sqrt_vector[i] = sqrt(element);
     }
 }
 
@@ -363,15 +382,15 @@ void initDictionaries(size_t rows, size_t cols, float update_dictionary[rows][co
     scalarMultiply(rows, cols, temp_dictionary, 10.0f);
     square(rows, cols, temp_dictionary);
 
-    float sum_vector[1][cols];  // 1 x 3
+    float sum_vector[cols];  // 1 x 3
     sum(rows, cols, temp_dictionary, sum_vector);
 
-    float sqrt_vector[1][cols];
-    squareRoot(1, cols, sum_vector, sqrt_vector);
+    float sqrt_vector[cols];
+    squareRootVector(cols, sum_vector, sqrt_vector);
 
     for (int j = 0; j < rows; ++j) {
         for (int k = 0; k < cols; ++k) {
-            dictionary[j][k] = temp_dictionary[j][k] / sqrt_vector[0][k];
+            dictionary[j][k] = temp_dictionary[j][k] / sqrt_vector[k];
         }
     }
 }

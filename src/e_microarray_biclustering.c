@@ -1,20 +1,10 @@
+#include <common.h>
 #include <e-lib.h>
 #include <math.h>
+#include <static_buffers.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#define IN_ROWS 56
-#define IN_COLS 12625
-#define N 3
-#define MU_W 0.005
-#define GAMMA 0.5
-#define DELTA 0.1
-#define MU_2 0.01
-#define ALPHA 0
-#define NUM_ITER 2000
-#define ALPHA_W 0
-#define BETA 0.01
 
 void adjustScaling(float scaling);
 void mean();
@@ -31,6 +21,10 @@ int main(void) {
 	nu_k = (unsigned *) 0x5000;	// Address of dual variable
 	done_flag = (unsigned *) 0x7000;	// "Done" flag
 
+    // Initialise barriers
+    e_barrier_init(barriers, tgt_bars);
+
+    // Get core id
 	e_coreid_t id = e_get_coreid();
 	unsigned row, col;
 
@@ -61,11 +55,13 @@ int main(void) {
 			nu_k[i] = wk[i] * (scaling * -MU_2);
 		}
 
-		// SYNCH
+		// Synch with all other cores
+		e_barrier(barriers, tgt_bars);
 
 		// e_write(&dev, 0, 0, 0x6000, &sync_data, sizeof(sync_data));
 
-    	// SYNCH
+    	// Synch with all other cores
+    	e_barrier(barriers, tgt_bars);
 
 		for (i = 0; i < IN_ROWS; ++i) {
 			// nu[i] = nu[i] + subgrad[i] +
