@@ -1,4 +1,3 @@
-#include <complex.h>
 #include <e-hal.h>
 #include <e-loader.h>
 #include <math.h>
@@ -18,11 +17,10 @@ void fillRandom(size_t rows, size_t cols, float matrix[rows][cols]);
 void mean(size_t rows, size_t cols, float matrix[rows][cols], float mean_vector[cols]);
 void sum(size_t rows, size_t cols, float matrix[rows][cols], float sum_vector[cols]);
 void square(size_t rows, size_t cols, float matrix[rows][cols]);
-void squareRootComplex(size_t rows, size_t cols, complex float _Complex matrix[rows][cols]);
+void squareRoot(size_t rows, size_t cols, float matrix[rows][cols], float sqrt_matrix[rows][cols]);
 void removeDC(size_t rows, size_t cols, float matrix[rows][cols]);
-void initDictionaries(size_t rows, size_t cols, float _Complex update_dictionary[rows][cols], float _Complex dictionary[row][cols]);
+void initDictionaries(size_t rows, size_t cols, float update_dictionary[rows][cols], float dictionary[row][cols]);
 void getColumn(size_t rows, size_t cols, int column_index, float matrix[rows][cols], float column[rows]);
-void getColumnComplex(size_t rows, size_t cols, int column_index, float _Complex matrix[rows][cols], float _Complex column[rows]);
 
 int main(int argc, char *argv[]) {
     float input_data[IN_ROWS][IN_COLS];
@@ -61,8 +59,8 @@ int main(int argc, char *argv[]) {
     removeDC(IN_ROWS, IN_COLS, input_data);
 
     // Initialise the dictionaries
-    float _Complex update_w[IN_ROWS][N];
-    float _Complex dictionary_w[IN_ROWS][N];
+    float update_w[IN_ROWS][N];
+    float dictionary_w[IN_ROWS][N];
     initDictionaries(IN_ROWS, N, update_w, dictionary_w);
 
     // Epiphany setup
@@ -82,21 +80,21 @@ int main(int argc, char *argv[]) {
 	e_open(&dev, 0, 0, 1, N);
     e_reset_group(&dev);
 
-    // xt
+    // xt (first input data sample)
     float xt[IN_ROWS];
     getColumn(IN_ROWS, IN_COLS, 0, input_data, xt);
 
-    // Load the first input sample, and respective dictionary atoms into each core
+    // Load the first input data sample and respective dictionary atoms into each core
     for (int i = 0; i < N; ++i) {
-        float _Complex dictionary_wk[IN_ROWS];
-        getColumnComplex(IN_ROWS, N, i, dictionary_w, dictionary_wk);
+        float dictionary_wk[IN_ROWS];
+        getColumn(IN_ROWS, N, i, dictionary_w, dictionary_wk);
         
-        float _Complex update_wk[IN_ROWS];
-        getColumnComplex(IN_ROWS, N, i, update_w, update_wk);
+        float update_wk[IN_ROWS];
+        getColumn(IN_ROWS, N, i, update_w, update_wk);
 
         e_write(&dev, 0, i, 0x2000, &xt, IN_ROWS*sizeof(float));
-        e_write(&dev, 0, i, 0x4000, &dictionary_wk, IN_ROWS*sizeof(float _Complex));
-        e_write(&dev, 0, i, 0x5000, &update_wk, IN_ROWS*sizeof(float _Complex));
+        e_write(&dev, 0, i, 0x4000, &dictionary_wk, IN_ROWS*sizeof(float));
+        e_write(&dev, 0, i, 0x5000, &update_wk, IN_ROWS*sizeof(float));
         e_write(&dev, 0, i, 0x7000, &clr, sizeof(clr));
     }
 
@@ -106,11 +104,12 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    // Start all of the cores
-    e_start_group(&dev);
+    // TODO: Check for "done" flag and load the next data sample
 
     e_close(&dev);
     e_finalize();
+
+    // TODO: Read learned dictionary and output to .txt file
 
 	return EXIT_SUCCESS;
 }
@@ -287,8 +286,8 @@ void square(size_t rows, size_t cols, float matrix[rows][cols]) {
 }
 
 /*
-* Function: squareRootComplex
-* ---------------------------
+* Function: squareRoot
+* --------------------
 * Finds the square root of each element of
 * the input matrix
 *
@@ -299,11 +298,11 @@ void square(size_t rows, size_t cols, float matrix[rows][cols]) {
 *
 */
 
-void squareRootComplex(size_t rows, size_t cols, float matrix[rows][cols], float _Complex sqrt_matrix[rows][cols]) {
+void squareRoot(size_t rows, size_t cols, float matrix[rows][cols], float sqrt_matrix[rows][cols]) {
     for (int j = 0; j < rows; ++j) {
         for (int k = 0; k < cols; ++k) {
-            float _Complex element = (float _Complex)matrix[j][k];
-            sqrt_matrix[j][k] = csqrtf(element);
+            float element = matrix[j][k];
+            sqrt_matrix[j][k] = sqrt(element);
         }
     }
 }
@@ -356,16 +355,8 @@ void removeDC(size_t rows, size_t cols, float matrix[rows][cols]) {
 *
 */
 
-void initDictionaries(size_t rows, size_t cols, float _Complex update_dictionary[rows][cols], float _Complex dictionary[row][cols]) {
-    float temp_update_dictionary[rows][cols];
-    fill(rows, cols, temp_update_dictionary, 0.0f);
-
-    // Convert to float _Complex
-    for (int j = 0; j < rows; ++j) {
-        for (int k = 0; k < cols; ++k) {
-            update_dictionary[j][k] = (float _Complex)temp_update_dictionary[j][k];
-        }
-    }
+void initDictionaries(size_t rows, size_t cols, float update_dictionary[rows][cols], float dictionary[row][cols]) {
+    fill(rows, cols, update_dictionary, 0.0f);
 
     float temp_dictionary[rows][cols];
     fillRandom(rows, cols, temp_dictionary);
@@ -375,8 +366,8 @@ void initDictionaries(size_t rows, size_t cols, float _Complex update_dictionary
     float sum_vector[1][cols];  // 1 x 3
     sum(rows, cols, temp_dictionary, sum_vector);
 
-    float _Complex sqrt_vector[1][cols];
-    squareRootComplex(1, cols, sum_vector, sqrt_vector); 
+    float sqrt_vector[1][cols];
+    squareRoot(1, cols, sum_vector, sqrt_vector); 
 
     for (int j = 0; j < rows; ++j) {
         for (int k = 0; k < cols; ++k) {
@@ -400,26 +391,6 @@ void initDictionaries(size_t rows, size_t cols, float _Complex update_dictionary
 */
 
 void getColumn(size_t rows, size_t cols, int column_index, float matrix[rows][cols], float column[rows]) {
-    for (int i = 0; i < rows; ++i) {
-        column[i] = matrix[i][column_index];
-    }
-}
-
-/*
-* Function: getColumnComplex
-* --------------------------
-* Retrieves a specified column from matrix
-* and assigns it to a column vector
-*
-* rows: the number of rows in matrix
-* cols: the number of columns in matrix
-* column_index: the index of the column to be retrieved
-* matrix: the input matrix
-* column: the vector to store the retrieved column in
-*
-*/
-
-void getColumnComplex(size_t rows, size_t cols, int column_index, float _Complex matrix[rows][cols], float _Complex column[rows]) {
     for (int i = 0; i < rows; ++i) {
         column[i] = matrix[i][column_index];
     }
