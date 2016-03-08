@@ -2,9 +2,7 @@
 #include <e-lib.h>
 #include <math.h>
 #include <static_buffers.h>
-#include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
 #define NU_MEM_OFFSET 0x0300
 
@@ -12,20 +10,21 @@ void adjustScaling(float scaling);
 int sign(float value);
 
 int main(void) {
-	unsigned *xt, *wk, *up_k, *nu_opt, *nu_k0, *nu_k1, *nu_k2, *done_flag, *src, *dest, *p;
-	unsigned slave_core;
-	int i, j, k, reps;
+	unsigned *xt, *wk, *update_wk, *nu_opt, *nu_k0, *nu_k1, *nu_k2, *done_flag, *src, *dest, *p;
+	unsigned slave_core, j, k, dest_addr;
+	int i, reps;
 	float subgrad[IN_ROWS];
 	float scaling;
 
-	xt = (unsigned *) 0x2000;	        // Address of xt (56 x 1)
-	wk = (unsigned *) 0x3000;	        // Address of dictionary atom (56 x 1)
-	update_wk = (unsigned *) 0x4000;	// Address of update atom (56 x 1)
-	nu_opt = (unsigned *) 0x4600;       // Address of optimal dual variable (56 x 1)
-	nu_k0 = (unsigned *) 0x5000;	    // Address of this cores dual variable estimate (56 x 1)
-	nu_k1 = (unsigned *) 0x5300;        // Address of neighbour 1 dual variable estimate (56 x 1)
-	nu_k2 = (unsigned *) 0x5600;        // Address of neighbour 2 dual variable estimate (56 x 1)
-	done_flag = (unsigned *) 0x7000;	// "Done" flag (1 x 1)
+	xt = (unsigned *) XT_MEM_ADDR;	        // Address of xt (56 x 1)
+	wk = (unsigned *) WK_MEM_ADDR;	        // Address of dictionary atom (56 x 1)
+	update_wk = (unsigned *) UP_WK_MEM_ADDR;	// Address of update atom (56 x 1)
+	nu_opt = (unsigned *) NU_OPT_MEM_ADDR;       // Address of optimal dual variable (56 x 1)
+	nu_k0 = (unsigned *) NU_K0_MEM_ADDR;	    // Address of this cores dual variable estimate (56 x 1)
+	nu_k1 = (unsigned *) NU_K1_MEM_ADDR;        // Address of neighbour 1 dual variable estimate (56 x 1)
+	nu_k2 = (unsigned *) NU_K2_MEM_ADDR;        // Address of neighbour 2 dual variable estimate (56 x 1)
+	done_flag = (unsigned *) DONE_MEM_ADDR;	// "Done" flag (1 x 1)
+    p = 0x0000;
 
     // Initialise barriers
     e_barrier_init(barriers, tgt_bars);
@@ -61,16 +60,17 @@ int main(void) {
 			// Synch with all other cores
 			e_barrier(barriers, tgt_bars);
 
-			dest = nu_k0;
+			dest_addr = (unsigned)NU_K0_MEM_ADDR;
 
 	        // Exchange dual variable estimates
 			for (j = 0; j < e_group_config.group_rows; ++j) {
 	            for (k = 0; k < e_group_config.group_cols; ++k) {
 	                if ((j != e_group_config.core_row) | (k != e_group_config.core_col)) {
-	                    slave_core = (unsigned)e_get_global_address(i, j, p);
-	                    src = slave_core + nu_k0;
-	                    dest = dest + NU_MEM_OFFSET;
-	                    e_dma_copy(nu_k0 + NU_MEM_OFFSET, src, IN_ROWS*sizeof(float));
+	                    slave_core = (unsigned)e_get_global_address(j, k, p);
+	                    src = (unsigned *)(slave_core + (unsigned)NU_K0_MEM_ADDR);
+	                    dest_addr = dest_addr + (unsigned)NU_MEM_OFFSET;
+	                    dest = (unsigned *)(dest_addr);
+	                    e_dma_copy(dest, src, IN_ROWS*sizeof(float));
 	                }
 	            }
 			}
@@ -116,7 +116,7 @@ int main(void) {
 		}
 
 		// Raising "done" flag
-	   	(*(done_flag)) = 0x00000001;
+	   	(*(done_flag)) = 1;
 
 	   	// Put core in idle state
    		__asm__ __volatile__("idle");
@@ -149,7 +149,7 @@ void adjustScaling(float scaling) {
 * Returns an integer (-1, 0, 1) depending on
 * the sign of value
 *
-* value: the value to check 
+* value: the value to check
 */
 
 int sign(float value) {
@@ -157,7 +157,7 @@ int sign(float value) {
 		return 1;
 	} else if (value < 0.0f) {
 		return -1;
-	} else if (value == 0.0f) {
+	} else {
 		return 0;
 	}
 }

@@ -93,14 +93,14 @@ int main(int argc, char *argv[]) {
         float dual_var[IN_ROWS];
         fillVector(IN_ROWS, dual_var, 0.0f);
 
-        e_write(&dev, 0, i, 0x2000, &xt, IN_ROWS*sizeof(float));
-        e_write(&dev, 0, i, 0x3000, &dictionary_wk, IN_ROWS*sizeof(float));
-        e_write(&dev, 0, i, 0x4000, &update_wk, IN_ROWS*sizeof(float));
-        e_write(&dev, 0, i, 0x4600, &dual_var, IN_ROWS*sizeof(float));
-        e_write(&dev, 0, i, 0x5000, &dual_var, IN_ROWS*sizeof(float));
-        e_write(&dev, 0, i, 0x5300, &dual_var, IN_ROWS*sizeof(float));
-        e_write(&dev, 0, i, 0x5600, &dual_var, IN_ROWS*sizeof(float));
-        e_write(&dev, 0, i, 0x7000, &clr, sizeof(clr));
+        e_write(&dev, 0, i, XT_MEM_ADDR, &xt, IN_ROWS*sizeof(float));
+        e_write(&dev, 0, i, WK_MEM_ADDR, &dictionary_wk, IN_ROWS*sizeof(float));
+        e_write(&dev, 0, i, UP_WK_MEM_ADDR, &update_wk, IN_ROWS*sizeof(float));
+        e_write(&dev, 0, i, NU_OPT_MEM_ADDR, &dual_var, IN_ROWS*sizeof(float));
+        e_write(&dev, 0, i, NU_K0_MEM_ADDR, &dual_var, IN_ROWS*sizeof(float));
+        e_write(&dev, 0, i, NU_K1_MEM_ADDR, &dual_var, IN_ROWS*sizeof(float));
+        e_write(&dev, 0, i, NU_K2_MEM_ADDR, &dual_var, IN_ROWS*sizeof(float));
+        e_write(&dev, 0, i, DONE_MEM_ADDR, &clr, sizeof(clr));
     }
 
     // Load program to the workgroup and run
@@ -110,6 +110,22 @@ int main(int argc, char *argv[]) {
     }
 
     // TODO: Check for "done" flag and load the next data sample
+    int done[N], all_done;
+
+    while(1) {
+        all_done = 0;
+
+        for (int i = 0; i < N; ++i) {
+            e_read(&dev, 0, i, DONE_MEM_ADDR, &done[i], sizeof(int));
+            all_done += done[i];
+            printf("Done count:%i, core 0,%i: %i\n", all_done, i, done[i]);
+        }
+
+        if (all_done == N) {
+            printf("All done!");
+            break;
+        }
+    }
 
     e_close(&dev);
     e_finalize();

@@ -1,9 +1,22 @@
 # depslib dependency file v1.0
-1456222536 source:/home/parallella/microarray-biclustering/src/microarray_biclustering.c
+1457388205 source:/home/parallella/microarray-biclustering/src/microarray_biclustering.c
+	<common.h>
+	<e-hal.h>
+	<e-loader.h>
+	<math.h>
 	<stdlib.h>
 	<stdio.h>
 	<string.h>
-	<errno.h>
-	<unistd.h>
-	<e-hal.h>
+
+1457277085 source:/home/parallella/microarray-biclustering/src/static_buffers.c
+	<static_buffers.h>
+
+1457385868 source:/home/parallella/microarray-biclustering/src/e_microarray_biclustering.c
+	<common.h>
+	<e-lib.h>
+	<math.h>
+	<static_buffers.h>
+	<stdio.h>
+	<stdlib.h>
+	<string.h>
 
