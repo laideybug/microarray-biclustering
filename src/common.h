@@ -10,7 +10,7 @@
 #define DELTA 0.1
 #define MU_2 0.01
 #define ALPHA 0
-#define NUM_ITER 3
+#define NUM_ITER 2000
 #define ALPHA_W 0
 #define BETA 0.01
 

@@ -8,6 +8,7 @@
 
 void adjustScaling(float scaling);
 int sign(float value);
+void sync_isr(int);
 
 int main(void) {
 	unsigned *xt, *wk, *update_wk, *nu_opt, *nu_k0, *nu_k1, *nu_k2, *done_flag, *src, *dest, *p;
@@ -26,11 +27,16 @@ int main(void) {
 	done_flag = (unsigned *) DONE_MEM_ADDR;	// "Done" flag (1 x 1)
     p = 0x0000;
 
+    // Re-enable interrupts
+    e_irq_attach(E_SYNC, sync_isr);
+    e_irq_mask(E_SYNC, E_FALSE);
+    e_irq_global_mask(E_FALSE);
+
     // Initialise barriers
     e_barrier_init(barriers, tgt_bars);
 
     while (1) {
-		// Resetting/Initialising the dual variable and update atom
+		// Resetting/initialising the dual variable and update atom
 		for (i = 0; i < IN_ROWS; ++i) {
 			nu_opt[i] = 0.0f;
 			update_wk[i] = 0.0f;
@@ -118,9 +124,11 @@ int main(void) {
 		// Raising "done" flag
 	   	(*(done_flag)) = 1;
 
-	   	// Put core in idle state
-   		__asm__ __volatile__("idle");
+        // Put core in idle state
+        __asm__ __volatile__("idle");
 	}
+
+    return EXIT_SUCCESS;
 }
 
 /*
@@ -160,4 +168,16 @@ int sign(float value) {
 	} else {
 		return 0;
 	}
+}
+
+/*
+* Function: sync_isr
+* ------------------
+* Override sync function
+*
+* x: arbitrary value
+*/
+
+void __attribute__((interrupt)) sync_isr(int x) {
+    return;
 }

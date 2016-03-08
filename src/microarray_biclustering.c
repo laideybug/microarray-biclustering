@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 
 float gaussRand();
 void scalarMultiply(size_t rows, size_t cols, float matrix[rows][cols], float num);
@@ -78,11 +79,7 @@ int main(int argc, char *argv[]) {
 	e_open(&dev, 0, 0, 1, N);
     e_reset_group(&dev);
 
-    // xt (first input data sample)
-    float xt[IN_ROWS];
-    getColumn(IN_ROWS, IN_COLS, 0, input_data, xt);
-
-    // Load the first input data sample and respective dictionary atoms into each core
+    // Load the dictionary atoms into each core
     for (int i = 0; i < N; ++i) {
         float dictionary_wk[IN_ROWS];
         getColumn(IN_ROWS, N, i, dictionary_w, dictionary_wk);
@@ -93,44 +90,57 @@ int main(int argc, char *argv[]) {
         float dual_var[IN_ROWS];
         fillVector(IN_ROWS, dual_var, 0.0f);
 
-        e_write(&dev, 0, i, XT_MEM_ADDR, &xt, IN_ROWS*sizeof(float));
         e_write(&dev, 0, i, WK_MEM_ADDR, &dictionary_wk, IN_ROWS*sizeof(float));
         e_write(&dev, 0, i, UP_WK_MEM_ADDR, &update_wk, IN_ROWS*sizeof(float));
         e_write(&dev, 0, i, NU_OPT_MEM_ADDR, &dual_var, IN_ROWS*sizeof(float));
         e_write(&dev, 0, i, NU_K0_MEM_ADDR, &dual_var, IN_ROWS*sizeof(float));
         e_write(&dev, 0, i, NU_K1_MEM_ADDR, &dual_var, IN_ROWS*sizeof(float));
         e_write(&dev, 0, i, NU_K2_MEM_ADDR, &dual_var, IN_ROWS*sizeof(float));
-        e_write(&dev, 0, i, DONE_MEM_ADDR, &clr, sizeof(clr));
     }
 
-    // Load program to the workgroup and run
-    if (e_load_group("./bin/Debug/e_microarray_biclustering.srec", &dev, 0, 0, 1, N, E_TRUE) != E_OK) {
+    // Load program to the workgroup but do not run yet
+    if (e_load_group("./bin/Debug/e_microarray_biclustering.srec", &dev, 0, 0, 1, N, E_FALSE) != E_OK) {
         printf("Failed to load e_microarray_biclustering.srec\n");
         return EXIT_FAILURE;
     }
 
-    // TODO: Check for "done" flag and load the next data sample
     int done[N], all_done;
+    float xt[IN_ROWS];  // xt (first input data sample)
+    clock_t start = clock(), diff;
 
-    while(1) {
-        all_done = 0;
+    for (int i = 0; i < IN_COLS; ++i) {
+        getColumn(IN_ROWS, IN_COLS, i, input_data, xt);
 
-        for (int i = 0; i < N; ++i) {
-            e_read(&dev, 0, i, DONE_MEM_ADDR, &done[i], sizeof(int));
-            all_done += done[i];
-            printf("Done count:%i, core 0,%i: %i\n", all_done, i, done[i]);
+        for (int j = 0; j < N; ++j) {
+            e_write(&dev, 0, j, XT_MEM_ADDR, &xt, IN_ROWS*sizeof(float));   // "Stream" next data sample
+            e_write(&dev, 0, j, DONE_MEM_ADDR, &clr, sizeof(clr));  // Clear done flag
         }
 
-        if (all_done == N) {
-            printf("All done!");
-            break;
+        // Start/wake workgroup
+        e_start_group(&dev);
+        printf("Processing input sample %i...\n\n", i);
+
+        while (1) {
+            all_done = 0;
+
+            for (int k = 0; k < N; ++k) {
+                e_read(&dev, 0, k, DONE_MEM_ADDR, &done[k], sizeof(int));
+                all_done += done[k];
+            }
+
+            if (all_done == N) {
+                break;
+            }
         }
+
+        diff = clock() - start;
+
+        float secs = diff / CLOCKS_PER_SEC;
+        printf("Percent complete: %.3f%%, Average speed: %.2f seconds/sample\nTime elapsed: %.2f seconds Total time: %.2f seconds, Remaining time: %.2f seconds\n\n", ((i+1)/IN_COLS)*100.0f, secs/(i+1), secs, (secs/(i+1))*IN_COLS, (secs/(i+1))*IN_COLS - secs);
     }
 
     e_close(&dev);
     e_finalize();
-
-    // TODO: Read learned dictionary and output to .txt file
 
 	return EXIT_SUCCESS;
 }
