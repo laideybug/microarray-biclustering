@@ -6,7 +6,6 @@
 
 #define NU_MEM_OFFSET 0x0300
 
-void adjustScaling(float scaling);
 int sign(float value);
 void sync_isr(int);
 
@@ -36,27 +35,25 @@ int main(void) {
     e_barrier_init(barriers, tgt_bars);
 
     while (1) {
-		// Resetting/initialising the dual variable and update atom
-		for (i = 0; i < IN_ROWS; ++i) {
-			nu_opt[i] = 0.0f;
-			update_wk[i] = 0.0f;
-		}
-
 		scaling = 0.0f;
 
 		for (reps = 0; reps < NUM_ITER; ++reps) {
 			for (i = 0; i < IN_ROWS; ++i) {
 				/* subgrad = (nu-xt)*minus_mu_over_N */
 				subgrad[i] = nu_opt[i] - xt[i];
-				subgrad[i] *= (-MU_2 / N);
-			}
-
-			for (i = 0; i < IN_ROWS; ++i) {
+				subgrad[i] = subgrad[i] * (-MU_2 * ONE_OVER_N);
 				/* scaling = (my_W_transpose*nu) */
-				scaling += wk[i] * nu_opt[i];
+				scaling = scaling + wk[i] * nu_opt[i];
 			}
 
-			adjustScaling(scaling);
+			// Adjust scaling
+			if (scaling > GAMMA) {
+				scaling = (scaling - GAMMA) * ONE_OVER_DELTA;
+			} else if (scaling < -GAMMA) {
+				scaling = (scaling + GAMMA) * ONE_OVER_DELTA;
+			} else {
+				scaling = 0;
+			}
 
 			for (i = 0; i < IN_ROWS; ++i) {
 				/* D * diagmat(scaling*my_minus_mu) */
@@ -86,38 +83,44 @@ int main(void) {
 
 	    	// Average dual variable estimates
 			for (i = 0; i < IN_ROWS; ++i) {
-	            float mean_nu_i = (nu_k0[i] + nu_k1[i] + nu_k2[i]) / N;
-	            nu_opt[i] = nu_opt[i] + subgrad[i] + mean_nu_i;
+	            nu_opt[i] = nu_opt[i] + subgrad[i] + ((nu_k0[i] + nu_k1[i] + nu_k2[i]) * ONE_OVER_N);
 			}
 		}
 
 		for (i = 0; i < IN_ROWS; ++i) {
 			/* scaling = (my_W_transpose*nu); */
-			scaling += wk[i] * nu_opt[i];
+			scaling = scaling + wk[i] * nu_opt[i];
 		}
 
-		adjustScaling(scaling);
-
-		// Create update atom (Y_opt)
-		for (i = 0; i < IN_ROWS; ++i) {
-			update_wk[i] =  MU_W * (nu_opt[i] * scaling);
+		// Adjust scaling
+		if (scaling > GAMMA) {
+			scaling = (scaling - GAMMA) * ONE_OVER_DELTA;
+		} else if (scaling < -GAMMA) {
+			scaling = (scaling + GAMMA) * ONE_OVER_DELTA;
+		} else {
+			scaling = 0;
 		}
 
 		// Update dictionary atom
 		float rms_wk = 0.0f;
 
+		// Create update atom (Y_opt)
 		for (i = 0; i < IN_ROWS; ++i) {
-			wk[i] += update_wk[i];
+			update_wk[i] =  MU_W * (nu_opt[i] * scaling);
+			wk[i] = wk[i] + update_wk[i];
 			wk[i] = fmax(abs(wk[i])-BETA*MU_W, 0.0f) * sign(wk[i]);
+	        rms_wk = rms_wk + wk[i] * wk[i];
 
-	        rms_wk += pow(wk[i], 2);
+	        // Resetting/initialising the dual variable and update atom
+			update_wk[i] = 0.0f;
+			nu_opt[i] = 0.0f;
 		}
 
 		rms_wk = sqrt(rms_wk);
 
 		if (rms_wk > 1.0f) {
 			for (i = 0; i < IN_ROWS; ++i) {
-				wk[i] /= rms_wk;
+				wk[i] = wk[i] / rms_wk;
 			}
 		}
 
@@ -129,26 +132,6 @@ int main(void) {
 	}
 
     return EXIT_SUCCESS;
-}
-
-/*
-* Function: adjustScaling
-* -----------------------
-* Adjusts the value of scaling
-* depending on it's relation to
-* the value of GAMMA
-*
-* scaling: the value to adjust
-*/
-
-void adjustScaling(float scaling) {
-	if (scaling > GAMMA) {
-		scaling = (scaling - GAMMA) / DELTA;
-	} else if (scaling < -GAMMA) {
-		scaling = (scaling + GAMMA) / DELTA;
-	} else {
-		scaling = 0;
-	}
 }
 
 /*
