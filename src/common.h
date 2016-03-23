@@ -16,6 +16,7 @@
 #define ALPHA_W 		    0.0
 #define BETA 			    0.01
 
+//#define SH_MEM_SIZE = 13;
 #define XT_MEM_ADDR 0x4000
 #define WK_MEM_ADDR 0x4230
 #define UP_WK_MEM_ADDR 0x4460
@@ -23,6 +24,6 @@
 #define NU_K0_MEM_ADDR 0x4920
 #define NU_K1_MEM_ADDR 0x5150
 #define NU_K2_MEM_ADDR 0x5380
-#define DONE_MEM_ADDR 0x5500
+#define DONE_MEM_ADDR 0x8f000000
 
 #endif // COMMON_H_INCLUDED
