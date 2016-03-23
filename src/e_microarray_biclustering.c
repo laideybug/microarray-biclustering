@@ -4,9 +4,9 @@
 #include <static_buffers.h>
 #include <stdlib.h>
 
-#define NU_MEM_OFFSET 0x0300
+#define NU_MEM_OFFSET 0x0230
 
-int sign(float value);
+float sign(float value);
 void sync_isr(int);
 
 int main(void) {
@@ -143,13 +143,13 @@ int main(void) {
 * value: the value to check
 */
 
-int sign(float value) {
+float sign(float value) {
 	if (value > 0.0f) {
-		return 1;
+		return 1.0f;
 	} else if (value < 0.0f) {
-		return -1;
+		return -1.0f;
 	} else {
-		return 0;
+		return 0.0f;
 	}
 }
 

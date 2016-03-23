@@ -1,5 +1,5 @@
 # depslib dependency file v1.0
-1457388205 source:/home/parallella/microarray-biclustering/src/microarray_biclustering.c
+1457457705 source:/home/parallella/microarray-biclustering/src/microarray_biclustering.c
 	<common.h>
 	<e-hal.h>
 	<e-loader.h>
@@ -7,16 +7,15 @@
 	<stdlib.h>
 	<stdio.h>
 	<string.h>
+	<time.h>
 
 1457277085 source:/home/parallella/microarray-biclustering/src/static_buffers.c
 	<static_buffers.h>
 
-1457385868 source:/home/parallella/microarray-biclustering/src/e_microarray_biclustering.c
+1458594351 source:/home/parallella/microarray-biclustering/src/e_microarray_biclustering.c
 	<common.h>
 	<e-lib.h>
 	<math.h>
 	<static_buffers.h>
-	<stdio.h>
 	<stdlib.h>
-	<string.h>
 
