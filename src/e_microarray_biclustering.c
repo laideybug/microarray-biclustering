@@ -24,8 +24,6 @@ int main(void) {
 	nu_k1 = (unsigned *) NU_K1_MEM_ADDR;        // Address of neighbour 1 dual variable estimate (56 x 1)
 	nu_k2 = (unsigned *) NU_K2_MEM_ADDR;        // Address of neighbour 2 dual variable estimate (56 x 1)
 	done_flag = (unsigned *) DONE_MEM_ADDR;	// "Done" flag (1 x 1)
-
-	done_flag = done_flag + e_group_config.core_col;
     p = 0x0000;
 
     // Re-enable interrupts
@@ -52,7 +50,7 @@ int main(void) {
 
 			for (i = 0; i < IN_ROWS; ++i) {
 				/* D * diagmat(scaling*my_minus_mu) */
-				nu_k0[i] = nu_k0[i] + wk[i] * (scaling * -MU_2);
+				nu_k0[i] = wk[i] * (scaling * -MU_2);
 			}
 
 			// Synch with all other cores
@@ -78,7 +76,7 @@ int main(void) {
 
 	    	// Average dual variable estimates
 			for (i = 0; i < IN_ROWS; ++i) {
-	            nu_opt[i] = nu_opt[i] + subgrad[i] + ((nu_k0[i] + nu_k1[i] + nu_k2[i]) * ONE_OVER_N);
+	            nu_opt[i] = subgrad[i] + ((nu_k0[i] + nu_k1[i] + nu_k2[i]) * ONE_OVER_N);
 			}
 		}
 

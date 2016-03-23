@@ -65,7 +65,6 @@ int main(int argc, char *argv[]) {
     // Epiphany setup
     e_platform_t platform;
 	e_epiphany_t dev;
-    e_mem_t mbuf;
 
     e_init(NULL);
 	e_reset_system();
@@ -99,11 +98,6 @@ int main(int argc, char *argv[]) {
         e_write(&dev, 0, i, NU_K2_MEM_ADDR, &dual_var, IN_ROWS*sizeof(float));
     }
 
-    if (e_alloc(&mbuf, 0, N*sizeof(int)) != E_OK) {
-        printf("Error: Failed to allocate shared memory\n");
-        return EXIT_FAILURE;
-    }
-
     // Load program to the workgroup but do not run yet
     if (e_load_group("./bin/Debug/e_microarray_biclustering.srec", &dev, 0, 0, 1, N, E_FALSE) != E_OK) {
         printf("Error: Failed to load e_microarray_biclustering.srec\n");
@@ -130,7 +124,7 @@ int main(int argc, char *argv[]) {
             all_done = 0;
 
             for (int k = 0; k < N; ++k) {
-                e_read(&mbuf, 0, 0, DONE_MEM_ADDR + k, &done[k], sizeof(int));
+                e_read(&dev, 0, k, DONE_MEM_ADDR, &done[k], sizeof(int));
                 all_done += done[k];
             }
 
