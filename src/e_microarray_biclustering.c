@@ -14,8 +14,7 @@ int main(void) {
 	unsigned *xt, *wk, *update_wk, *nu_opt, *nu_k0, *nu_k1, *nu_k2, *done_flag, *src, *dest, *p;
 	unsigned slave_core, j, k, dest_addr;
 	int i, reps;
-	float subgrad[IN_ROWS];
-	float scaling;
+	float subgrad[IN_ROWS], scaling;
 
 	xt = (unsigned *) XT_MEM_ADDR;	        // Address of xt (56 x 1)
 	wk = (unsigned *) WK_MEM_ADDR;	        // Address of dictionary atom (56 x 1)
@@ -39,35 +38,19 @@ int main(void) {
 		scaling = 0.0f;
 
 		for (reps = 0; reps < NUM_ITER; ++reps) {
-			for (i = 0; i < IN_ROWS; i+=4) {
+			for (i = 0; i < IN_ROWS; ++i) {
 				/* subgrad = (nu-xt)*minus_mu_over_N */
 				subgrad[i] = nu_opt[i] - xt[i];
 				subgrad[i] = subgrad[i] * (-MU_2 * ONE_OVER_N);
 				/* scaling = (my_W_transpose*nu) */
 				scaling = scaling + wk[i] * nu_opt[i];
-
-				subgrad[i+1] = nu_opt[i+1] - xt[i+1];
-				subgrad[i+1] = subgrad[i+1] * (-MU_2 * ONE_OVER_N);
-				scaling = scaling + wk[i+1] * nu_opt[i+1];
-
-				subgrad[i+2] = nu_opt[i+2] - xt[i+2];
-				subgrad[i+2] = subgrad[i+2] * (-MU_2 * ONE_OVER_N);
-				scaling = scaling + wk[i+2] * nu_opt[i+2];
-
-				subgrad[i+3] = nu_opt[i+3] - xt[i+3];
-				subgrad[i+3] = subgrad[i+3] * (-MU_2 * ONE_OVER_N);
-				scaling = scaling + wk[i+3] * nu_opt[i+3];
 			}
 
 			adjustScaling(scaling);
 
-			for (i = 0; i < IN_ROWS; i+=4) {
+			for (i = 0; i < IN_ROWS; ++i) {
 				/* D * diagmat(scaling*my_minus_mu) */
 				nu_k0[i] = wk[i] * (scaling * -MU_2);
-
-				nu_k0[i+1] = wk[i+1] * (scaling * -MU_2);
-				nu_k0[i+2] = wk[i+2] * (scaling * -MU_2);
-				nu_k0[i+3] = wk[i+3] * (scaling * -MU_2);
 			}
 
 			// Synch with all other cores
@@ -92,12 +75,8 @@ int main(void) {
 	    	e_barrier(barriers, tgt_bars);
 
 	    	// Average dual variable estimates
-			for (i = 0; i < IN_ROWS; i+=4) {
+			for (i = 0; i < IN_ROWS; ++i) {
 	            nu_opt[i] = nu_opt[i] + subgrad[i] + ((nu_k0[i] + nu_k1[i] + nu_k2[i]) * ONE_OVER_N);
-
-	            nu_opt[i+1] = nu_opt[i+1] + subgrad[i+1] + ((nu_k0[i+1] + nu_k1[i+1] + nu_k2[i+1]) * ONE_OVER_N);
-	            nu_opt[i+2] = nu_opt[i+2] + subgrad[i+2] + ((nu_k0[i+2] + nu_k1[i+2] + nu_k2[i+2]) * ONE_OVER_N);
-	            nu_opt[i+3] = nu_opt[i+3] + subgrad[i+3] + ((nu_k0[i+3] + nu_k1[i+3] + nu_k2[i+3]) * ONE_OVER_N);
 			}
 		}
 

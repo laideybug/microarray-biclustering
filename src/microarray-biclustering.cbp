@@ -13,6 +13,9 @@
 				<Option object_output="obj/Debug/" />
 				<Option type="1" />
 				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-std=c99" />
+				</Compiler>
 				<Linker>
 					<Add library="/opt/adapteva/esdk/tools/host/lib/libe-hal.so" />
 					<Add library="/opt/adapteva/esdk/tools/host/lib/libe-loader.so" />
@@ -26,6 +29,9 @@
 				<Option type="1" />
 				<Option compiler="e-gcc" />
 				<Option use_console_runner="0" />
+				<Compiler>
+					<Add option="-funroll-loops" />
+				</Compiler>
 				<Linker>
 					<Add library="/opt/adapteva/esdk/tools/e-gnu/epiphany-elf/lib/libe-lib.a" />
 				</Linker>
@@ -60,11 +66,11 @@
 		<Extensions>
 			<code_completion />
 			<debugger>
-				<remote_debugging target="EDebug">
-					<options conn_type="0" serial_baud="115200" ip_address="192.168.0.3" ip_port="5100" skip_ld_path="1" />
-				</remote_debugging>
 				<remote_debugging target="Debug">
 					<options conn_type="0" serial_baud="115200" skip_ld_path="1" />
+				</remote_debugging>
+				<remote_debugging target="EDebug">
+					<options conn_type="0" serial_baud="115200" ip_address="192.168.0.3" ip_port="5100" skip_ld_path="1" />
 				</remote_debugging>
 			</debugger>
 		</Extensions>
