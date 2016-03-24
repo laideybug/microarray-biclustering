@@ -12,7 +12,7 @@ void sync_isr(int);
 
 int main(void) {
 	unsigned *xt, *wk, *update_wk, *nu_opt, *nu_k, *nu_k0, *nu_k1, *nu_k2, *done_flag, *dest, *p;
-	unsigned slave_core, j, k, src_addr;
+	unsigned slave_core, j, k, src_addr, done_flag_addr;
 	float subgrad[IN_ROWS], scaling, rms_wk, rms_wk_reciprocol;
 	int i, reps;
 
@@ -23,7 +23,9 @@ int main(void) {
 	nu_k0 = (unsigned *)NU_K0_MEM_ADDR;	    // Address of node 0 dual variable estimate (56 x 1)
 	nu_k1 = (unsigned *)NU_K1_MEM_ADDR;        // Address of node 1 dual variable estimate (56 x 1)
 	nu_k2 = (unsigned *)NU_K2_MEM_ADDR;        // Address of node 2 dual variable estimate (56 x 1)
-	done_flag = (unsigned *)DONE_MEM_ADDR;	 // "Done" flag (1 x 1)
+
+	done_flag_addr = (unsigned)DONE_MEM_ADDR + (e_group_config.core_col * sizeof(int));
+	done_flag = (unsigned *)done_flag_addr;	 // "Done" flag (1 x 1)
 
     src_addr = (unsigned)NU_K0_MEM_ADDR;
 
@@ -114,7 +116,7 @@ int main(void) {
 		}
 
 		// Raising "done" flag
-	   	(*(done_flag)) += 0x00000001;
+	   	(*(done_flag)) = 0x00000001;
 
         // Put core in idle state
         __asm__ __volatile__("idle");

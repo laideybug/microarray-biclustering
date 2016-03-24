@@ -102,7 +102,7 @@ int main(int argc, char *argv[]) {
     }
 
     // Allocate shared memory
-    if (e_alloc(&mbuf, SHM_OFFSET, sizeof(int)) != E_OK) {
+    if (e_alloc(&mbuf, SHM_OFFSET, N*sizeof(int)) != E_OK) {
         printf("Error: Failed to allocate shared memory\n");
         return EXIT_FAILURE;
     };
@@ -113,28 +113,31 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    int done, clr = 0;
+    int done[N], all_done, clr = 0;
     float xt[IN_ROWS];  // xt (first input data sample)
     clock_t start = clock(), diff;
 
     for (int i = 0; i < IN_COLS; ++i) {
         getColumn(IN_ROWS, IN_COLS, i, input_data, xt);
-        e_write(&mbuf, 0, 0, 0x0, &clr, sizeof(int));  // Clear done flag
 
         for (int j = 0; j < N; ++j) {
             e_write(&dev, 0, j, XT_MEM_ADDR, &xt, IN_ROWS*sizeof(float));   // "Stream" next data sample
+            e_write(&mbuf, 0, 0, j*sizeof(int), &clr, sizeof(int));  // Clear done flag
         }
 
         // Start/wake workgroup
         e_start_group(&dev);
         printf("Processing input sample %i...\n\n", i);
 
-        done = 0;
-
         while (1) {
-            e_read(&mbuf, 0, 0, 0x0, &done, sizeof(int));
+            all_done = 0;
 
-            if (done == N) {
+            for (int j = 0; j < N; ++j) {
+                e_read(&mbuf, 0, 0, j*sizeof(int), &done[j], sizeof(int));
+                all_done += done[j];
+            }
+
+            if (all_done == N) {
                 break;
             }
         }
