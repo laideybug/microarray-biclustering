@@ -7,6 +7,8 @@
 #include <string.h>
 #include <time.h>
 
+#define SHM_OFFSET 0x01000000
+
 float gaussRand();
 void scalarMultiply(size_t rows, size_t cols, float matrix[rows][cols], float num);
 void fillMatrix(size_t rows, size_t cols, float matrix[rows][cols], float num);
@@ -65,12 +67,13 @@ int main(int argc, char *argv[]) {
     // Epiphany setup
     e_platform_t platform;
 	e_epiphany_t dev;
+	e_mem_t mbuf;
 
     e_init(NULL);
 	e_reset_system();
 	e_get_platform_info(&platform);
-    unsigned clr;
-    clr = (unsigned)0x00000000;
+    //unsigned clr;
+    //clr = (unsigned)CLR;
 
 	e_set_loader_verbosity(L_D0);
 	e_set_host_verbosity(H_D0);
@@ -98,37 +101,40 @@ int main(int argc, char *argv[]) {
         e_write(&dev, 0, i, NU_K2_MEM_ADDR, &dual_var, IN_ROWS*sizeof(float));
     }
 
+    // Allocate shared memory
+    if (e_alloc(&mbuf, SHM_OFFSET, sizeof(int)) != E_OK) {
+        printf("Error: Failed to allocate shared memory\n");
+        return EXIT_FAILURE;
+    };
+
     // Load program to the workgroup but do not run yet
     if (e_load_group("./bin/Debug/e_microarray_biclustering.srec", &dev, 0, 0, 1, N, E_FALSE) != E_OK) {
         printf("Error: Failed to load e_microarray_biclustering.srec\n");
         return EXIT_FAILURE;
     }
 
-    int done[N], all_done;
+    int done, clr = 0;
     float xt[IN_ROWS];  // xt (first input data sample)
     clock_t start = clock(), diff;
 
     for (int i = 0; i < IN_COLS; ++i) {
         getColumn(IN_ROWS, IN_COLS, i, input_data, xt);
+        e_write(&mbuf, 0, 0, 0x0, &clr, sizeof(int));  // Clear done flag
 
         for (int j = 0; j < N; ++j) {
             e_write(&dev, 0, j, XT_MEM_ADDR, &xt, IN_ROWS*sizeof(float));   // "Stream" next data sample
-            e_write(&dev, 0, j, DONE_MEM_ADDR, &clr, sizeof(clr));  // Clear done flag
         }
 
         // Start/wake workgroup
         e_start_group(&dev);
         printf("Processing input sample %i...\n\n", i);
 
+        done = 0;
+
         while (1) {
-            all_done = 0;
+            e_read(&mbuf, 0, 0, 0x0, &done, sizeof(int));
 
-            for (int k = 0; k < N; ++k) {
-                e_read(&dev, 0, k, DONE_MEM_ADDR, &done[k], sizeof(int));
-                all_done += done[k];
-            }
-
-            if (all_done == N) {
+            if (done == N) {
                 break;
             }
         }
@@ -140,6 +146,7 @@ int main(int argc, char *argv[]) {
     }
 
     e_close(&dev);
+    e_free(&mbuf);
     e_finalize();
 
 	return EXIT_SUCCESS;
