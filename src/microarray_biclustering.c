@@ -24,10 +24,10 @@ void initDictionaries(size_t rows, size_t cols, float update_dictionary[rows][co
 void getColumn(size_t rows, size_t cols, int column_index, float matrix[rows][cols], float column[rows]);
 
 int main(int argc, char *argv[]) {
+    // Read input data
     float input_data[IN_ROWS][IN_COLS];
     srand(1);
 
-    // Read input data
     FILE *file;
     file = fopen("data.txt", "r");
 
@@ -72,8 +72,6 @@ int main(int argc, char *argv[]) {
     e_init(NULL);
 	e_reset_system();
 	e_get_platform_info(&platform);
-    //unsigned clr;
-    //clr = (unsigned)CLR;
 
 	e_set_loader_verbosity(L_D0);
 	e_set_host_verbosity(H_D0);
