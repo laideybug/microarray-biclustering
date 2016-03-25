@@ -29,7 +29,7 @@
 // Master node memory addresses
 #define XT_SHMEM_ADDR 0x8f000000
 #define DONE_MEM_ADDR_0 0x4000
-#define DONE_MEM_ADDR_1 0x4010
-#define DONE_MEM_ADDR_2 0x4020
+#define DONE_MEM_ADDR_1 0x4004
+#define DONE_MEM_ADDR_2 0x4008
 
 #endif // COMMON_H_INCLUDED
