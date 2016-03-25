@@ -4,6 +4,7 @@
 #define IN_ROWS			    56
 #define IN_COLS			    12625
 #define N 				    3
+#define MASTER_COL 		    3
 #define ONE_OVER_N 		    0.333333333
 #define PI 				    3.141592654
 #define MU_W 			    0.005

@@ -24,7 +24,9 @@ int main(void) {
 	nu_k1 = (unsigned *)NU_K1_MEM_ADDR;        // Address of node 1 dual variable estimate (56 x 1)
 	nu_k2 = (unsigned *)NU_K2_MEM_ADDR;        // Address of node 2 dual variable estimate (56 x 1)
 
-	done_flag_addr = (unsigned)DONE_MEM_ADDR + (e_group_config.core_col * sizeof(int));
+    p = 0x0000;
+	done_flag_addr = (unsigned)e_get_global_address(0, MASTER_COL, p);
+	done_flag_addr += (unsigned)DONE_MEM_ADDR_0 + (unsigned)(e_group_config.core_col*sizeof(int))
 	done_flag = (unsigned *)done_flag_addr;	 // "Done" flag (1 x 1)
 
     src_addr = (unsigned)NU_K0_MEM_ADDR;
@@ -34,7 +36,6 @@ int main(void) {
     }
 
     nu_k = (unsigned *)src_addr;    // Address of this cores dual variable estimate
-    p = 0x0000;
 
     // Re-enable interrupts
     e_irq_attach(E_SYNC, sync_isr);
@@ -45,6 +46,9 @@ int main(void) {
     e_barrier_init(barriers, tgt_bars);
 
     while (1) {
+        // Put core in idle state
+        __asm__ __volatile__("idle");
+
 		scaling = 0.0f;
 
 		for (reps = 0; reps < NUM_ITER; ++reps) {
@@ -65,7 +69,7 @@ int main(void) {
 
 	        // Exchange dual variable estimates
 			for (j = 0; j < e_group_config.group_rows; ++j) {
-	            for (k = 0; k < e_group_config.group_cols; ++k) {
+	            for (k = 0; k < MASTER_COL; ++k) {
 	                if ((j != e_group_config.core_row) | (k != e_group_config.core_col)) {
                         slave_core = (unsigned)e_get_global_address(j, k, p);
 	                    dest = (unsigned *)(slave_core + (unsigned)src_addr);
@@ -117,9 +121,6 @@ int main(void) {
 
 		// Raising "done" flag
 	   	(*(done_flag)) = 0x00000001;
-
-        // Put core in idle state
-        __asm__ __volatile__("idle");
 	}
 
     return EXIT_SUCCESS;
