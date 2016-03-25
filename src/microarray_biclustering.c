@@ -143,7 +143,7 @@ int main(int argc, char *argv[]) {
         diff = clock() - start;
 
         float secs = diff / CLOCKS_PER_SEC;
-        printf("Percent complete: %.3f%%, Average speed: %.2f seconds/sample\nTime elapsed: %.2f seconds Total time: %.2f seconds, Remaining time: %.2f seconds\n\n", ((i+1)/IN_COLS)*100.0f, secs/(i+1), secs, (secs/(i+1))*IN_COLS, (secs/(i+1))*IN_COLS - secs);
+        printf("Percent complete: %.3f%%, Average speed: %.2f seconds/sample\nTime elapsed: %.2f seconds Total time: %.2f seconds, Remaining time: %.2f seconds\n\n", (i+1)*100.0f/IN_COLS, secs/(i+1), secs, (secs/(i+1))*IN_COLS, (secs/(i+1))*IN_COLS - secs);
     }
 
     e_close(&dev);

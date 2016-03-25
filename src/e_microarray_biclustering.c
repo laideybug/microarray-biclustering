@@ -67,7 +67,7 @@ int main(void) {
 			for (j = 0; j < e_group_config.group_rows; ++j) {
 	            for (k = 0; k < e_group_config.group_cols; ++k) {
 	                if ((j != e_group_config.core_row) | (k != e_group_config.core_col)) {
-                        slave_core = (unsigned)e_get_global_address(i, j, p);
+                        slave_core = (unsigned)e_get_global_address(j, k, p);
 	                    dest = (unsigned *)(slave_core + (unsigned)src_addr);
 	                    e_dma_copy(dest, nu_k, IN_ROWS*sizeof(float));
 	                }
