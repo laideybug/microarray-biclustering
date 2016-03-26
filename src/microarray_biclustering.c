@@ -1,4 +1,3 @@
-#include <common.h>
 #include <e-hal.h>
 #include <e-loader.h>
 #include <math.h>
@@ -6,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include "common.h"
 
 #define SHM_OFFSET 0x01000000
 
@@ -20,21 +20,25 @@ void square(size_t rows, size_t cols, float matrix[rows][cols]);
 void squareRootMatrix(size_t rows, size_t cols, float matrix[rows][cols], float sqrt_matrix[rows][cols]);
 void squareRootVector(size_t length, float vector[length], float sqrt_vector[length]);
 void removeDC(size_t rows, size_t cols, float matrix[rows][cols]);
-void initDictionaries(size_t rows, size_t cols, float update_dictionary[rows][cols], float dictionary[rows][cols]);
+void initDictionary(size_t rows, size_t cols, float dictionary[rows][cols]);
 void getColumn(size_t rows, size_t cols, int column_index, float matrix[rows][cols], float column[rows]);
 
 int main(int argc, char *argv[]) {
     // Read input data
-    float input_data[IN_ROWS][IN_COLS];
+    float input_data[IN_ROWS][IN_COLS], data_point, dictionary_w[IN_ROWS][N], update_wk[IN_ROWS], dual_var[IN_ROWS];
+    int current_row, current_col, i, clr, done;
+    char path[100] = "../../data/data.txt";
+
+    // Seed the random number generator
     srand(1);
 
+    // Open data.txt
     FILE *file;
-    file = fopen("data.txt", "r");
+    file = fopen(path, "r");
 
     if (file != NULL) {
-        float data_point;
-        int current_row = 0;
-        int current_col = 0;
+        current_row = 0;
+        current_col = 0;
 
         while (fscanf(file, "%f", &data_point) != EOF) {
             input_data[current_row][current_col] = data_point;
@@ -58,11 +62,8 @@ int main(int argc, char *argv[]) {
 
     // Remove DC component from input data (i.e. centering)
     removeDC(IN_ROWS, IN_COLS, input_data);
-
     // Initialise the dictionaries
-    float update_w[IN_ROWS][N];
-    float dictionary_w[IN_ROWS][N];
-    initDictionaries(IN_ROWS, N, update_w, dictionary_w);
+    initDictionary(IN_ROWS, N, dictionary_w);
 
     // Epiphany setup
     e_platform_t platform;
@@ -76,20 +77,18 @@ int main(int argc, char *argv[]) {
 	e_set_loader_verbosity(L_D0);
 	e_set_host_verbosity(H_D0);
 
-    // Open a 1 x N workgroup
-	e_open(&dev, 0, 0, 1, N);
+    // Open a 1 x N+1 workgroup
+	e_open(&dev, 0, 0, 1, N+1);
     e_reset_group(&dev);
 
+    // Initialise update dictionary and dual variable vectors with 0
+    fillVector(IN_ROWS, update_wk, 0.0f);
+    fillVector(IN_ROWS, dual_var, 0.0f);
+
     // Load the dictionary atoms into each core
-    for (int i = 0; i < N; ++i) {
+    for (i = 0; i < N; ++i) {
         float dictionary_wk[IN_ROWS];
         getColumn(IN_ROWS, N, i, dictionary_w, dictionary_wk);
-
-        float update_wk[IN_ROWS];
-        getColumn(IN_ROWS, N, i, update_w, update_wk);
-
-        float dual_var[IN_ROWS];
-        fillVector(IN_ROWS, dual_var, 0.0f);
 
         e_write(&dev, 0, i, WK_MEM_ADDR, &dictionary_wk, IN_ROWS*sizeof(float));
         e_write(&dev, 0, i, UP_WK_MEM_ADDR, &update_wk, IN_ROWS*sizeof(float));
@@ -100,50 +99,38 @@ int main(int argc, char *argv[]) {
     }
 
     // Allocate shared memory
-    if (e_alloc(&mbuf, SHM_OFFSET, N*sizeof(int)) != E_OK) {
+    if (e_alloc(&mbuf, SHM_OFFSET, IN_ROWS*IN_COLS*sizeof(float) + sizeof(int)) != E_OK) {
         printf("Error: Failed to allocate shared memory\n");
         return EXIT_FAILURE;
     };
 
+    // Write input data to shared memory
+    e_write(&mbuf, 0, 0, 0x0, &input_data, IN_ROWS*IN_COLS*sizeof(float));
+    // Clear done flag in shared memory
+    clr = 0x00000000;
+    e_write(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float), &clr, sizeof(int));
+
     // Load program to the workgroup but do not run yet
-    if (e_load_group("./bin/Debug/e_microarray_biclustering.srec", &dev, 0, 0, 1, N, E_FALSE) != E_OK) {
+    if (e_load_group("e_microarray_biclustering.srec", &dev, 0, 0, 1, N, E_FALSE) != E_OK) {
         printf("Error: Failed to load e_microarray_biclustering.srec\n");
         return EXIT_FAILURE;
     }
 
-    int done[N], all_done, clr = 0;
-    float xt[IN_ROWS];  // xt (first input data sample)
-    clock_t start = clock(), diff;
+    // Load program to the master core but do not run yet
+    if (e_load("e_microarray_biclustering_master.srec", &dev, 0, MASTER_COL, E_FALSE) != E_OK) {
+        printf("Error: Failed to load e_microarray_biclustering_master.srec\n");
+        return EXIT_FAILURE;
+    }
 
-    for (int i = 0; i < IN_COLS; ++i) {
-        getColumn(IN_ROWS, IN_COLS, i, input_data, xt);
+    // Start/wake workgroup
+    e_start_group(&dev);
 
-        for (int j = 0; j < N; ++j) {
-            e_write(&dev, 0, j, XT_MEM_ADDR, &xt, IN_ROWS*sizeof(float));   // "Stream" next data sample
-            e_write(&mbuf, 0, 0, j*sizeof(int), &clr, sizeof(int));  // Clear done flag
+    while (1) {
+        e_read(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float), &done, sizeof(int));
+
+        if (done == 1) {
+            break;
         }
-
-        // Start/wake workgroup
-        e_start_group(&dev);
-        printf("Processing input sample %i...\n\n", i);
-
-        while (1) {
-            all_done = 0;
-
-            for (int j = 0; j < N; ++j) {
-                e_read(&mbuf, 0, 0, j*sizeof(int), &done[j], sizeof(int));
-                all_done += done[j];
-            }
-
-            if (all_done == N) {
-                break;
-            }
-        }
-
-        diff = clock() - start;
-
-        float secs = diff / CLOCKS_PER_SEC;
-        printf("Percent complete: %.3f%%, Average speed: %.2f seconds/sample\nTime elapsed: %.2f seconds Total time: %.2f seconds, Remaining time: %.2f seconds\n\n", (i+1)*100.0f/IN_COLS, secs/(i+1), secs, (secs/(i+1))*IN_COLS, (secs/(i+1))*IN_COLS - secs);
     }
 
     e_close(&dev);
@@ -427,14 +414,11 @@ void removeDC(size_t rows, size_t cols, float matrix[rows][cols]) {
 *
 * rows: the number of rows in matrix
 * cols: the number of columns in matrix
-* update_dictionary: the "update" dictionary
 * dictionary: the dictionary
 *
 */
 
-void initDictionaries(size_t rows, size_t cols, float update_dictionary[rows][cols], float dictionary[rows][cols]) {
-    fillMatrix(rows, cols, update_dictionary, 0.0f);
-
+void initDictionary(size_t rows, size_t cols, float dictionary[rows][cols]) {
     float temp_dictionary[rows][cols];
     fillMatrixRandom(rows, cols, temp_dictionary);
     scalarMultiply(rows, cols, temp_dictionary, 10.0f);

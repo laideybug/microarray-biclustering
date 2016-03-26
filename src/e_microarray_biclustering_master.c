@@ -1,18 +1,24 @@
-#include <common.h>
 #include <e-lib.h>
+#include <stdlib.h>
+#include "common.h"
 
 int main(void) {
-	unsigned *dest, *xt, *done_0, *done_1, *done_2, slave_core, src_addr, xt_addr;
+	unsigned *dest, *xt, *done_0, *done_1, *done_2, *done_flag, *p;
+	unsigned done_flag_addr, slave_core, src_addr, xt_addr;
 	int i, j, k, l, all_done, done[N];
 
 	src_addr = (unsigned)XT_MEM_ADDR;
 
 	done_0 = (unsigned *)DONE_MEM_ADDR_0;
-	done[0] = done_0;
+	done[0] = *done_0;
 	done_1 = (unsigned *)DONE_MEM_ADDR_1;
-	done[1] = done_1;
+	done[1] = *done_1;
 	done_2 = (unsigned *)DONE_MEM_ADDR_2;
-	done[2] = done_2;
+	done[2] = *done_2;
+
+    p = 0x0000;
+	done_flag_addr = (unsigned)XT_SHMEM_ADDR + (IN_ROWS*IN_COLS*sizeof(float));
+	done_flag = (unsigned *)done_flag_addr;
 
 	for (i = 0; i < IN_COLS; ++i) {
 		xt_addr = (unsigned)XT_SHMEM_ADDR + (i*IN_ROWS*sizeof(float));
@@ -32,13 +38,24 @@ int main(void) {
 		while (1) {
             all_done = 0;
 
-            for (l = 0; l < N; ++l) {
-                all_done += *done[l];
+            for (j = 0; j < N; ++j) {
+                all_done += done[l];
             }
 
             if (all_done == N) {
+                done[0] = 0;
+                done[1] = 0;
+                done[2] = 0;
                 break;
             }
         }
 	}
+
+	// Raising "done" flag for host
+    (*(done_flag)) = 0x00000001;
+
+	// Put core in idle state
+    __asm__ __volatile__("idle");
+
+    return EXIT_SUCCESS;
 }

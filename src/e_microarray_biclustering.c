@@ -1,8 +1,8 @@
-#include <common.h>
 #include <e-lib.h>
 #include <math.h>
-#include <static_buffers.h>
 #include <stdlib.h>
+#include "common.h"
+#include "static_buffers.h"
 
 #define NU_MEM_OFFSET 0x0230
 
@@ -26,7 +26,7 @@ int main(void) {
 
     p = 0x0000;
 	done_flag_addr = (unsigned)e_get_global_address(0, MASTER_COL, p);
-	done_flag_addr += (unsigned)DONE_MEM_ADDR_0 + (unsigned)(e_group_config.core_col*sizeof(int))
+	done_flag_addr += (unsigned)DONE_MEM_ADDR_0 + (unsigned)(e_group_config.core_col*sizeof(int));
 	done_flag = (unsigned *)done_flag_addr;	 // "Done" flag (1 x 1)
 
     src_addr = (unsigned)NU_K0_MEM_ADDR;
@@ -119,7 +119,7 @@ int main(void) {
 			}
 		}
 
-		// Raising "done" flag
+		// Raising "done" flag for master node
 	   	(*(done_flag)) = 0x00000001;
 	}
 
@@ -132,6 +132,7 @@ int main(void) {
 * Adjusts the value of scaling
 *
 * scaling: the value to adjust
+*
 */
 
 inline void adjustScaling(float scaling) {
@@ -147,10 +148,11 @@ inline void adjustScaling(float scaling) {
 /*
 * Function: sign
 * --------------
-* Returns an integer (-1, 0, 1) depending on
+* Returns a float (-1.0, 0.0, 1.0) depending on
 * the sign of value
 *
 * value: the value to check
+*
 */
 
 float sign(float value) {
@@ -169,6 +171,7 @@ float sign(float value) {
 * Override sync function
 *
 * x: arbitrary value
+*
 */
 
 void __attribute__((interrupt)) sync_isr(int x) {

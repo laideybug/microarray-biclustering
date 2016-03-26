@@ -37,6 +37,7 @@
 				</Linker>
 				<ExtraCommands>
 					<Add after="e-objcopy --srec-forceS3 --output-target srec ./bin/Debug/e_microarray_biclustering.elf ./bin/Debug/e_microarray_biclustering.srec" />
+					<Add after="e-objcopy --srec-forceS3 --output-target srec ./bin/Debug/e_microarray_biclustering_master.elf ./bin/Debug/e_microarray_biclustering_master.srec" />
 					<Mode after="always" />
 				</ExtraCommands>
 			</Target>
@@ -49,6 +50,10 @@
 		</Compiler>
 		<Unit filename="common.h" />
 		<Unit filename="e_microarray_biclustering.c">
+			<Option compilerVar="CC" />
+			<Option target="EDebug" />
+		</Unit>
+		<Unit filename="e_microarray_biclustering_master.c">
 			<Option compilerVar="CC" />
 			<Option target="EDebug" />
 		</Unit>
@@ -66,11 +71,11 @@
 		<Extensions>
 			<code_completion />
 			<debugger>
-				<remote_debugging target="Debug">
-					<options conn_type="0" serial_baud="115200" skip_ld_path="1" />
-				</remote_debugging>
 				<remote_debugging target="EDebug">
 					<options conn_type="0" serial_baud="115200" ip_address="192.168.0.3" ip_port="5100" skip_ld_path="1" />
+				</remote_debugging>
+				<remote_debugging target="Debug">
+					<options conn_type="0" serial_baud="115200" skip_ld_path="1" />
 				</remote_debugging>
 			</debugger>
 		</Extensions>
