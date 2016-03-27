@@ -1,0 +1,8 @@
+*.cbp
+*.depend
+*.layout
+
+*.elf
+*.srec
+
+bin/
