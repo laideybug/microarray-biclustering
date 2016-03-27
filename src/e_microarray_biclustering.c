@@ -155,7 +155,7 @@ inline void adjustScaling(float scaling) {
 *
 */
 
-float sign(float value) {
+inline float sign(float value) {
 	if (value > 0.0f) {
 		return 1.0f;
 	} else if (value < 0.0f) {

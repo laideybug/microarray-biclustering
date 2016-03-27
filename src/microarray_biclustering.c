@@ -27,13 +27,14 @@ int main(int argc, char *argv[]) {
     // Read input data
     float input_data[IN_ROWS][IN_COLS], data_point, dictionary_w[IN_ROWS][N], update_wk[IN_ROWS], dual_var[IN_ROWS];
     int current_row, current_col, i, clr, done;
-    char path[100] = "../../data/data.txt";
+    char path[100];
 
     // Seed the random number generator
     srand(1);
 
     // Open data.txt
     FILE *file;
+    path = "../../data/data.txt";
     file = fopen(path, "r");
 
     if (file != NULL) {
