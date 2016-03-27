@@ -24,9 +24,15 @@ int main(void) {
 	nu_k2 = (unsigned *)NU_K2_MEM_ADDR;        // Address of node 2 dual variable estimate (56 x 1)
 
     p = 0x0000;
-	done_flag_addr = (unsigned)e_get_global_address(0, MASTER_COL, p);
+
+#if USE_MASTER_NODE
+	done_flag_addr = (unsigned)e_get_global_address(0, N, p);
 	done_flag_addr += (unsigned)DONE_MEM_ADDR_0 + (unsigned)(e_group_config.core_col*sizeof(int));
 	done_flag = (unsigned *)done_flag_addr;	 // "Done" flag (1 x 1)
+#else
+    done_flag_addr = (unsigned)SHMEM_ADDR + (e_group_config.core_col * sizeof(int));
+	done_flag = (unsigned *)done_flag_addr;	 // "Done" flag (1 x 1)
+#endif
 
     src_addr = (unsigned)NU_K0_MEM_ADDR;
 
@@ -45,9 +51,10 @@ int main(void) {
     e_barrier_init(barriers, tgt_bars);
 
     while (1) {
+#if USE_MASTER_NODE
         // Put core in idle state
         __asm__ __volatile__("idle");
-
+#endif
 		scaling = 0.0f;
 
 		for (reps = 0; reps < NUM_ITER; ++reps) {
@@ -68,7 +75,7 @@ int main(void) {
 
 	        // Exchange dual variable estimates
 			for (j = 0; j < e_group_config.group_rows; ++j) {
-	            for (k = 0; k < MASTER_COL; ++k) {
+	            for (k = 0; k < N; ++k) {
 	                if ((j != e_group_config.core_row) | (k != e_group_config.core_col)) {
                         slave_core = (unsigned)e_get_global_address(j, k, p);
 	                    dest = (unsigned *)(slave_core + (unsigned)src_addr);
@@ -120,6 +127,11 @@ int main(void) {
 
 		// Raising "done" flag for master node
 	   	(*(done_flag)) = 0x00000001;
+
+#if !USE_MASTER_NODE
+        // Put core in idle state
+        __asm__ __volatile__("idle");
+#endif
 	}
 
     return EXIT_SUCCESS;

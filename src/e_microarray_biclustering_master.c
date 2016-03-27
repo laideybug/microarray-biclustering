@@ -16,11 +16,11 @@ int main(void) {
 	done[2] = *done_2;
 
     p = 0x0000;
-	done_flag_addr = (unsigned)XT_SHMEM_ADDR + (IN_ROWS*IN_COLS*sizeof(float));
+	done_flag_addr = (unsigned)SHMEM_ADDR + (IN_ROWS*IN_COLS*sizeof(float));
 	done_flag = (unsigned *)done_flag_addr;
 
 	for (i = 0; i < IN_COLS; ++i) {
-		xt_addr = (unsigned)XT_SHMEM_ADDR + (i*IN_ROWS*sizeof(float));
+		xt_addr = (unsigned)SHMEM_ADDR + (i*IN_ROWS*sizeof(float));
 		xt = (unsigned *)xt_addr;
 
 		for (j = 0; j < e_group_config.group_rows; ++j) {
