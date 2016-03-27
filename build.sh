@@ -26,7 +26,7 @@ case $(uname -p) in
 esac
 
 # Build HOST side application
-${CROSS_PREFIX}gcc -Wall -std=c99 -Os src/microarray_biclustering.c -o bin/microarray_biclustering.elf ${EINCS} ${ELIBS} -le-hal -le-loader -lm
+${CROSS_PREFIX}gcc -Wall -std=c99 -Os src/microarray_biclustering.c src/microarray_biclustering_utils.c -o bin/microarray_biclustering.elf ${EINCS} ${ELIBS} -le-hal -le-loader -lm
 
 # Build DEVICE side program
 e-gcc -Wall -funroll-loops -O3 -T ${ELDF} src/e_microarray_biclustering.c src/static_buffers.c -o bin/e_microarray_biclustering.elf -le-lib -lm

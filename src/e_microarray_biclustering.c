@@ -1,6 +1,5 @@
 #include <e-lib.h>
 #include <math.h>
-#include <stdlib.h>
 #include "common.h"
 #include "static_buffers.h"
 

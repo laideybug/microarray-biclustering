@@ -1,6 +1,8 @@
 #ifndef COMMON_H_INCLUDED
 #define COMMON_H_INCLUDED
 
+#include <stdlib.h>
+
 #define IN_ROWS			    56
 #define IN_COLS			    12625
 #define N 				    3
@@ -18,18 +20,18 @@
 #define BETA 			    0.01
 
 // Slave node memory addresses
-#define XT_MEM_ADDR 0x4000
-#define WK_MEM_ADDR 0x4230
-#define UP_WK_MEM_ADDR 0x4460
-#define NU_OPT_MEM_ADDR 0x4690
-#define NU_K0_MEM_ADDR 0x4920
-#define NU_K1_MEM_ADDR 0x5150
-#define NU_K2_MEM_ADDR 0x5380
+#define XT_MEM_ADDR         0x4000
+#define WK_MEM_ADDR         0x4230
+#define UP_WK_MEM_ADDR      0x4460
+#define NU_OPT_MEM_ADDR     0x4690
+#define NU_K0_MEM_ADDR      0x4920
+#define NU_K1_MEM_ADDR      0x5150
+#define NU_K2_MEM_ADDR      0x5380
 
 // Master node memory addresses
-#define XT_SHMEM_ADDR 0x8f000000
-#define DONE_MEM_ADDR_0 0x4000
-#define DONE_MEM_ADDR_1 0x4004
-#define DONE_MEM_ADDR_2 0x4008
+#define XT_SHMEM_ADDR       0x8f000000
+#define DONE_MEM_ADDR_0     0x4000
+#define DONE_MEM_ADDR_1     0x4004
+#define DONE_MEM_ADDR_2     0x4008
 
 #endif // COMMON_H_INCLUDED
