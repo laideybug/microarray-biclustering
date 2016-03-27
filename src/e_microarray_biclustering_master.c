@@ -34,6 +34,8 @@ int main(void) {
 	        }
 		}
 
+		// TODO: Calculate inference and update clock cycles
+
 		while (1) {
             all_done = 0;
 

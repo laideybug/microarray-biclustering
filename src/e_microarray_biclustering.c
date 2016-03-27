@@ -7,13 +7,16 @@
 
 void adjustScaling(float scaling);
 float sign(float value);
-void sync_isr(int);
+void syncISR(int);
 
 int main(void) {
 	unsigned *xt, *wk, *update_wk, *nu_opt, *nu_k, *nu_k0, *nu_k1, *nu_k2, *done_flag, *dest, *p;
-	unsigned slave_core, j, k, src_addr, done_flag_addr;
+	unsigned slave_core, j, k, src_addr, done_flag_addr, out_mem_offset, timer_value_0, timer_value_1;
 	float subgrad[IN_ROWS], scaling, rms_wk, rms_wk_reciprocol;
 	int i, reps;
+#ifndef USE_MASTER_NODE
+    unsigned master_node_addr, inf_clks_addr, up_clks_addr;
+#endif
 
 	xt = (unsigned *)XT_MEM_ADDR;	            // Address of xt (56 x 1)
 	wk = (unsigned *)WK_MEM_ADDR;	            // Address of dictionary atom (56 x 1)
@@ -24,13 +27,17 @@ int main(void) {
 	nu_k2 = (unsigned *)NU_K2_MEM_ADDR;        // Address of node 2 dual variable estimate (56 x 1)
 
     p = 0x0000;
+    out_mem_offset = (unsigned)(e_group_config.core_col*sizeof(int));
 
-#if USE_MASTER_NODE
-	done_flag_addr = (unsigned)e_get_global_address(0, N, p);
-	done_flag_addr += (unsigned)DONE_MEM_ADDR_0 + (unsigned)(e_group_config.core_col*sizeof(int));
+#ifdef USE_MASTER_NODE
+	master_node_addr = (unsigned)e_get_global_address(0, N, p);
+	done_flag_addr = master_node_addr + (unsigned)DONE_MEM_ADDR_0 + out_mem_offset;
 	done_flag = (unsigned *)done_flag_addr;	 // "Done" flag (1 x 1)
+
+	inf_clks_addr = master_node_addr + (unsigned)INF_CLKS_MEM_ADDR_0 + out_mem_offset;
+	up_clks_addr = master_node_addr + (unsigned)UP_CLKS_MEM_ADDR_0 + out_mem_offset;
 #else
-    done_flag_addr = (unsigned)SHMEM_ADDR + (e_group_config.core_col * sizeof(int));
+    done_flag_addr = (unsigned)SHMEM_ADDR + out_mem_offset;
 	done_flag = (unsigned *)done_flag_addr;	 // "Done" flag (1 x 1)
 #endif
 
@@ -51,11 +58,15 @@ int main(void) {
     e_barrier_init(barriers, tgt_bars);
 
     while (1) {
-#if USE_MASTER_NODE
+#ifdef USE_MASTER_NODE
         // Put core in idle state
         __asm__ __volatile__("idle");
 #endif
-		scaling = 0.0f;
+        scaling = 0.0f;
+
+        // Set timers for benchmarking
+        e_ctimer_set(E_CTIMER_0, E_CTIMER_MAX);
+        e_ctimer_start(E_CTIMER_0, E_CTIMER_CLK);
 
 		for (reps = 0; reps < NUM_ITER; ++reps) {
 			for (i = 0; i < IN_ROWS; ++i) {
@@ -93,6 +104,10 @@ int main(void) {
 			}
 		}
 
+		timer_value_0 = E_CTIMER_MAX - e_ctimer_stop(E_CTIMER_0);
+		e_ctimer_set(E_CTIMER_0, E_CTIMER_MAX);
+		e_ctimer_start(E_CTIMER_0, E_CTIMER_CLK);
+
 		for (i = 0; i < IN_ROWS; ++i) {
 			/* scaling = (my_W_transpose*nu); */
 			scaling = scaling + wk[i] * nu_opt[i];
@@ -125,10 +140,12 @@ int main(void) {
 			}
 		}
 
+		timer_value_1 = E_CTIMER_MAX - e_ctimer_stop(E_CTIMER_0);
+
 		// Raising "done" flag for master node
 	   	(*(done_flag)) = 0x00000001;
 
-#if !USE_MASTER_NODE
+#ifndef USE_MASTER_NODE
         // Put core in idle state
         __asm__ __volatile__("idle");
 #endif
@@ -185,6 +202,6 @@ inline float sign(float value) {
 *
 */
 
-void __attribute__((interrupt)) sync_isr(int x) {
+void __attribute__((interrupt)) syncISR(int x) {
     return;
 }

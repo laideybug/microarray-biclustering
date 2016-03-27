@@ -11,7 +11,7 @@ int main(int argc, char *argv[]) {
     float input_data[IN_ROWS][IN_COLS], data_point, dictionary_w[IN_ROWS][N], update_wk[IN_ROWS], dual_var[IN_ROWS];
     int current_row, current_col, i, all_done, clr = 0x00000000;
     char path[100] = "../data/data.txt";
-#if !USE_MASTER_NODE
+#ifndef USE_MASTER_NODE
     int done[N], j;
     float xt[IN_ROWS];
 #endif
@@ -85,7 +85,7 @@ int main(int argc, char *argv[]) {
         e_write(&dev, 0, i, NU_K2_MEM_ADDR, &dual_var, IN_ROWS*sizeof(float));
     }
 
-#if USE_MASTER_NODE
+#ifdef USE_MASTER_NODE
     // Allocate shared memory
     if (e_alloc(&mbuf, SHM_OFFSET, IN_ROWS*IN_COLS*sizeof(float) + sizeof(int)) != E_OK) {
         printf("Error: Failed to allocate shared memory\n");
@@ -110,7 +110,7 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-#if USE_MASTER_NODE
+#ifdef USE_MASTER_NODE
     // Load program to the master core but do not run yet
     if (e_load("e_microarray_biclustering_master.srec", &dev, 0, N, E_FALSE) != E_OK) {
         printf("Error: Failed to load e_microarray_biclustering_master.srec\n");

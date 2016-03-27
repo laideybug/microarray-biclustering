@@ -3,7 +3,7 @@
 
 #include <stdlib.h>
 
-#define USE_MASTER_NODE		0
+#define USE_MASTER_NODE
 
 #define IN_ROWS			    56
 #define IN_COLS			    12625
@@ -37,5 +37,16 @@
 #define DONE_MEM_ADDR_0     0x4000
 #define DONE_MEM_ADDR_1     0x4004
 #define DONE_MEM_ADDR_2     0x4008
+
+#define INF_CLKS_MEM_ADDR_0 0x4100
+#define INF_CLKS_MEM_ADDR_1 0x4104
+#define INF_CLKS_MEM_ADDR_2 0x4108
+#define UP_CLKS_MEM_ADDR_0  0x4112
+#define UP_CLKS_MEM_ADDR_1  0x4116
+#define UP_CLKS_MEM_ADDR_2  0x4120
+
+// Core speeds
+#define E_MHZ 600
+#define A_MHZ 667
 
 #endif // COMMON_H_INCLUDED
