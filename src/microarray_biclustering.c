@@ -8,10 +8,12 @@
 #define SHM_OFFSET 0x01000000
 
 int main(int argc, char *argv[]) {
-    float input_data[IN_ROWS][IN_COLS], data_point, dictionary_w[IN_ROWS][N], update_wk[IN_ROWS], dual_var[IN_ROWS];
-    int current_row, current_col, i, all_done, clr = 0x00000000;
+    float input_data[IN_ROWS][IN_COLS], data_point, dictionary_w[IN_ROWS][N], update_wk[IN_ROWS], dual_var[IN_ROWS], secs, avg_inf_clks, avg_up_clks;
+    int current_row, current_col, i, all_done, total_inf_clks, total_up_clks, t, clr = 0x00000000;
     char path[100] = "../data/data.txt";
-#ifndef USE_MASTER_NODE
+#ifdef USE_MASTER_NODE
+    int masternode_clks;
+#else
     int done[N], j;
     float xt[IN_ROWS];
 #endif
@@ -65,7 +67,11 @@ int main(int argc, char *argv[]) {
 	e_set_host_verbosity(H_D0);
 
     // Open the workgroup
-	e_open(&dev, 0, 0, 1, N + USE_MASTER_NODE);
+#ifdef USE_MASTER_NODE
+	e_open(&dev, 0, 0, 1, N + 1);
+#else
+    e_open(&dev, 0, 0, 1, N);
+#endif
     e_reset_group(&dev);
 
     // Initialise update dictionary and dual variable vectors with 0
@@ -87,7 +93,7 @@ int main(int argc, char *argv[]) {
 
 #ifdef USE_MASTER_NODE
     // Allocate shared memory
-    if (e_alloc(&mbuf, SHM_OFFSET, IN_ROWS*IN_COLS*sizeof(float) + sizeof(int)) != E_OK) {
+    if (e_alloc(&mbuf, SHM_OFFSET, IN_ROWS*IN_COLS*sizeof(float) + 5*sizeof(int)) != E_OK) {
         printf("Error: Failed to allocate shared memory\n");
         return EXIT_FAILURE;
     };
@@ -122,15 +128,40 @@ int main(int argc, char *argv[]) {
 
     while (1) {
         e_read(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float), &all_done, sizeof(int));
+        e_read(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float) + sizeof(int), &t, sizeof(int));
+        e_read(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float) + (2*sizeof(int)), &total_inf_clks, sizeof(int));
+        e_read(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float) + (3*sizeof(int)), &total_up_clks, sizeof(int));
+        e_read(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float) + (4*sizeof(int)), &masternode_clks, sizeof(int));
+
+        secs = masternode_clks / E_CYCLES;
+        avg_inf_clks = total_inf_clks * ONE_OVER_N;
+        avg_up_clks = total_up_clks * ONE_OVER_N;
+
+        printf("\nConfiguration: Master Node\n");
+        printf("-------------------------------\n");
+        printf("Processed input sample: %i\n", t);
+        printf("Average clock cycles for inference step: %.2f clock cycles\n", avg_inf_clks);
+        printf("Average network speed of inference step: %.2f seconds\n", avg_inf_clks / E_CYCLES);
+        printf("Average clock cycles for update step: %.2f clock cycles\n", avg_up_clks);
+        printf("Average network speed of update step: %.2f seconds\n", avg_up_clks / E_CYCLES);
+        printf("-------------------------------\n");
+        printf("Percent complete: %.2f%%\n", (t+1)*100.0f/IN_COLS);
+        printf("Average speed: %.2f seconds/sample\n", secs/(t+1));
+        printf("Time elapsed: %.2f seconds\n", secs);
+        printf("Total time estimate: %.2f seconds\n", (secs/(t+1))*IN_COLS);
+        printf("Remaining time estimate: %.2f seconds\n\n", (secs/(t+1))*IN_COLS - secs);
 
         if (all_done == 1) {
+            printf("Done.");
             break;
         }
+
+        // Wipe output
     }
 #else
     clock_t start = clock(), diff;
 
-    for (i = 0; i < IN_COLS; ++i) {
+    for (t = 0; t < IN_COLS; ++t) {
         getColumn(IN_ROWS, IN_COLS, i, input_data, xt);
 
         for (j = 0; j < N; ++j) {
@@ -140,7 +171,6 @@ int main(int argc, char *argv[]) {
 
         // Start/wake workgroup
         e_start_group(&dev);
-        printf("Processing input sample %i...\n\n", i);
 
         while (1) {
             all_done = 0;
@@ -156,10 +186,20 @@ int main(int argc, char *argv[]) {
         }
 
         diff = clock() - start;
+        secs = diff / CLOCKS_PER_SEC;
 
-        float secs = diff / CLOCKS_PER_SEC;
-        printf("Percent complete: %.3f%%, Average speed: %.2f seconds/sample\nTime elapsed: %.2f seconds Total time: %.2f seconds, Remaining time: %.2f seconds\n\n", (i+1)*100.0f/IN_COLS, secs/(i+1), secs, (secs/(i+1))*IN_COLS, (secs/(i+1))*IN_COLS - secs);
+        printf("\nConfiguration: ARM\n");
+        printf("Processed input sample: %i\n", i);
+        printf("Percent complete: %.2f%%\n", (i+1)*100.0f/IN_COLS);
+        printf("Average speed: %.2f seconds/sample\n", secs/(i+1));
+        printf("Time elapsed: %.2f seconds\n", secs);
+        printf("Total time: %.2f seconds\n", (secs/(i+1))*IN_COLS);
+        printf("Remaining time: %.2f seconds\n\n", (secs/(i+1))*IN_COLS - secs);
+
+        // Wipe output
     }
+
+    printf("Done.")
 #endif
 
     e_close(&dev);

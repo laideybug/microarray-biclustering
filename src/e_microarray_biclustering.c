@@ -3,19 +3,17 @@
 #include "common.h"
 #include "static_buffers.h"
 
-#define NU_MEM_OFFSET 0x0230
-
 void adjustScaling(float scaling);
 float sign(float value);
 void syncISR(int);
 
 int main(void) {
-	unsigned *xt, *wk, *update_wk, *nu_opt, *nu_k, *nu_k0, *nu_k1, *nu_k2, *done_flag, *dest, *p;
-	unsigned slave_core, j, k, src_addr, done_flag_addr, out_mem_offset, timer_value_0, timer_value_1;
+	unsigned *xt, *wk, *update_wk, *nu_opt, *nu_k, *nu_k0, *nu_k1, *nu_k2, *ready_flag, *done_flag, *inf_clks, *up_clks, *dest, *p;
+	unsigned slave_core, j, k, src_addr, ready_flag_addr, done_flag_addr, inf_clks_addr, up_clks_addr, out_mem_offset, timer_value_0, timer_value_1;
 	float subgrad[IN_ROWS], scaling, rms_wk, rms_wk_reciprocol;
 	int i, reps;
-#ifndef USE_MASTER_NODE
-    unsigned master_node_addr, inf_clks_addr, up_clks_addr;
+#ifdef USE_MASTER_NODE
+    unsigned master_node_addr;
 #endif
 
 	xt = (unsigned *)XT_MEM_ADDR;	            // Address of xt (56 x 1)
@@ -31,16 +29,20 @@ int main(void) {
 
 #ifdef USE_MASTER_NODE
 	master_node_addr = (unsigned)e_get_global_address(0, N, p);
-	done_flag_addr = master_node_addr + (unsigned)DONE_MEM_ADDR_0 + out_mem_offset;
-	done_flag = (unsigned *)done_flag_addr;	 // "Done" flag (1 x 1)
-
-	inf_clks_addr = master_node_addr + (unsigned)INF_CLKS_MEM_ADDR_0 + out_mem_offset;
-	up_clks_addr = master_node_addr + (unsigned)UP_CLKS_MEM_ADDR_0 + out_mem_offset;
+	inf_clks_addr = master_node_addr + (unsigned)INF_CLKS_MEM_ADDR + out_mem_offset;
+	up_clks_addr = master_node_addr + (unsigned)UP_CLKS_MEM_ADDR + out_mem_offset;
+	done_flag_addr = master_node_addr + (unsigned)DONE_MEM_ADDR + out_mem_offset;
+	ready_flag_addr = master_node_addr + (unsigned)READY_MEM_ADDR + out_mem_offset;
+	ready_flag = (unsigned *)ready_flag_addr;
 #else
+    //inf_clks_addr = master_node_addr + (unsigned)INF_CLKS_MEM_ADDR + out_mem_offset;
+	//up_clks_addr = master_node_addr + (unsigned)UP_CLKS_MEM_ADDR + out_mem_offset;
     done_flag_addr = (unsigned)SHMEM_ADDR + out_mem_offset;
-	done_flag = (unsigned *)done_flag_addr;	 // "Done" flag (1 x 1)
 #endif
 
+    inf_clks = (unsigned *)inf_clks_addr;
+    up_clks = (unsigned *)up_clks_addr;
+    done_flag = (unsigned *)done_flag_addr;	 // "Done" flag (1 x 1)
     src_addr = (unsigned)NU_K0_MEM_ADDR;
 
     for (i = 0; i < e_group_config.core_col; ++i) {
@@ -50,12 +52,16 @@ int main(void) {
     nu_k = (unsigned *)src_addr;    // Address of this cores dual variable estimate
 
     // Re-enable interrupts
-    e_irq_attach(E_SYNC, sync_isr);
+    e_irq_attach(E_SYNC, syncISR);
     e_irq_mask(E_SYNC, E_FALSE);
     e_irq_global_mask(E_FALSE);
 
+#ifdef USE_MASTER_NODE
+    (*(ready_flag)) = 0x00000001;
+#else
     // Initialise barriers
     e_barrier_init(barriers, tgt_bars);
+#endif
 
     while (1) {
 #ifdef USE_MASTER_NODE
@@ -90,13 +96,15 @@ int main(void) {
 	                if ((j != e_group_config.core_row) | (k != e_group_config.core_col)) {
                         slave_core = (unsigned)e_get_global_address(j, k, p);
 	                    dest = (unsigned *)(slave_core + (unsigned)src_addr);
-	                    e_dma_copy(dest, nu_k, IN_ROWS*sizeof(float));
+	                    e_memcopy(dest, nu_k, IN_ROWS*sizeof(float));
 	                }
 	            }
 			}
 
+#ifndef USE_MASTER_NODE
 	    	// Synch with all other cores
 	    	e_barrier(barriers, tgt_bars);
+#endif
 
 	    	// Average dual variable estimates
 			for (i = 0; i < IN_ROWS; ++i) {
@@ -142,6 +150,9 @@ int main(void) {
 
 		timer_value_1 = E_CTIMER_MAX - e_ctimer_stop(E_CTIMER_0);
 
+		// Write benchmark values
+		(*(inf_clks)) = timer_value_0;
+		(*(up_clks)) = timer_value_1;
 		// Raising "done" flag for master node
 	   	(*(done_flag)) = 0x00000001;
 

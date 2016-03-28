@@ -3,8 +3,17 @@
 
 #include <stdlib.h>
 
+// Configuration macros
 #define USE_MASTER_NODE
+#define USE_DMA
 
+#ifdef USE_DMA
+#define e_memcopy(dst, src, size) e_dma_copy(dst, src, size)
+#else
+#define e_memcopy(dst, src, size) memcpy(dst, src, size)
+#endif
+
+// Program constants
 #define IN_ROWS			    56
 #define IN_COLS			    12625
 #define N 				    3
@@ -20,33 +29,27 @@
 #define ALPHA_W 		    0.0
 #define BETA 			    0.01
 
+// Core speeds - cycles per second
+#define E_CYCLES            600000000
+#define A_CYCLES            667000000
+
 // Shared memory base address
 #define SHMEM_ADDR          0x8f000000
 
 // Node memory addresses
-#define XT_MEM_ADDR         0x4000
-#define WK_MEM_ADDR         0x4230
-#define UP_WK_MEM_ADDR      0x4460
-#define NU_OPT_MEM_ADDR     0x4690
-#define NU_K0_MEM_ADDR      0x4920
-#define NU_K1_MEM_ADDR      0x5150
-#define NU_K2_MEM_ADDR      0x5380
-#define NU_K2_MEM_ADDR      0x5380
+#define XT_MEM_ADDR         0x4200
+#define WK_MEM_ADDR         0x4430
+#define UP_WK_MEM_ADDR      0x4660
+#define NU_OPT_MEM_ADDR     0x4890
+#define NU_K0_MEM_ADDR      0x5120
+#define NU_K1_MEM_ADDR      0x5350
+#define NU_K2_MEM_ADDR      0x5580
+#define NU_MEM_OFFSET       0x0230
 
 // Master node memory addresses
-#define DONE_MEM_ADDR_0     0x4000
-#define DONE_MEM_ADDR_1     0x4004
-#define DONE_MEM_ADDR_2     0x4008
-
-#define INF_CLKS_MEM_ADDR_0 0x4100
-#define INF_CLKS_MEM_ADDR_1 0x4104
-#define INF_CLKS_MEM_ADDR_2 0x4108
-#define UP_CLKS_MEM_ADDR_0  0x4112
-#define UP_CLKS_MEM_ADDR_1  0x4116
-#define UP_CLKS_MEM_ADDR_2  0x4120
-
-// Core speeds
-#define E_MHZ 600
-#define A_MHZ 667
+#define INF_CLKS_MEM_ADDR   0x4000
+#define UP_CLKS_MEM_ADDR    0x4200
+#define READY_MEM_ADDR      0x4400
+#define DONE_MEM_ADDR       0x4600
 
 #endif // COMMON_H_INCLUDED

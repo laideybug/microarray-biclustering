@@ -1,59 +1,111 @@
 #include <e-lib.h>
 #include "common.h"
+#include "static_buffers.h"
 
 int main(void) {
-	unsigned *dest, *xt, *done_0, *done_1, *done_2, *done_flag, *p;
-	unsigned done_flag_addr, slave_core, src_addr, xt_addr;
-	int i, j, k, l, all_done, done[N];
+	unsigned *dest, *xt, *all_done_flag, *total_inf_clks, *total_up_clks, *sample_no, *slave_ready_flag, *slave_done_flag, *slave_inf_clks, *slave_up_clks, *masternode_clks, *p;
+	unsigned all_done_flag_addr, sample_no_addr, total_inf_clks_addr, total_up_clks_addr, masternode_clks_addr, slave_core_addr, src_addr, xt_addr;
+	int i, j, k, all_ready, all_done, inf_clks, up_clks;
 
 	src_addr = (unsigned)XT_MEM_ADDR;
-
-	done_0 = (unsigned *)DONE_MEM_ADDR_0;
-	done[0] = *done_0;
-	done_1 = (unsigned *)DONE_MEM_ADDR_1;
-	done[1] = *done_1;
-	done_2 = (unsigned *)DONE_MEM_ADDR_2;
-	done[2] = *done_2;
-
     p = 0x0000;
-	done_flag_addr = (unsigned)SHMEM_ADDR + (IN_ROWS*IN_COLS*sizeof(float));
-	done_flag = (unsigned *)done_flag_addr;
+
+	all_done_flag_addr = (unsigned)SHMEM_ADDR + (IN_ROWS*IN_COLS*sizeof(float));
+	all_done_flag = (unsigned *)all_done_flag_addr;
+	sample_no_addr = (unsigned)SHMEM_ADDR + (IN_ROWS*IN_COLS*sizeof(float) + sizeof(int));
+    sample_no = (unsigned *)sample_no_addr;
+	total_inf_clks_addr = (unsigned)SHMEM_ADDR + (IN_ROWS*IN_COLS*sizeof(float) + (2*sizeof(int)));
+    total_inf_clks = (unsigned *)total_inf_clks_addr;
+    total_up_clks_addr = (unsigned)SHMEM_ADDR + (IN_ROWS*IN_COLS*sizeof(float) + (3*sizeof(int)));
+    total_up_clks = (unsigned *)total_up_clks_addr;
+    masternode_clks_addr = (unsigned)SHMEM_ADDR + (IN_ROWS*IN_COLS*sizeof(float) + (4*sizeof(int)));
+    masternode_clks = (unsigned *)masternode_clks_addr;
+
+    (*(sample_no)) = 1;
+
+    while (1) {
+        all_ready = 0;
+
+        for (i = 0; i < N; ++i) {
+            slave_ready_flag = (unsigned *)(READY_MEM_ADDR + i*sizeof(int));
+            all_ready += *slave_ready_flag;
+        }
+
+        if (all_ready == N) {
+            break;
+        }
+    }
+
+    (*(sample_no)) = 2;
+
+	// Set timers for benchmarking
+    e_ctimer_set(E_CTIMER_0, E_CTIMER_MAX);
+    e_ctimer_start(E_CTIMER_0, E_CTIMER_CLK);
 
 	for (i = 0; i < IN_COLS; ++i) {
 		xt_addr = (unsigned)SHMEM_ADDR + (i*IN_ROWS*sizeof(float));
 		xt = (unsigned *)xt_addr;
 
+		(*(sample_no)) = 3;
+
 		for (j = 0; j < e_group_config.group_rows; ++j) {
 	        for (k = 0; k < e_group_config.group_cols; ++k) {
 	            if ((j != e_group_config.core_row) | (k != e_group_config.core_col)) {
-                    slave_core = (unsigned)e_get_global_address(j, k, p);
-	                dest = (unsigned *)(slave_core + (unsigned)src_addr);
-	                e_dma_copy(dest, xt, IN_ROWS*sizeof(float));
+                    slave_core_addr = (unsigned)e_get_global_address(j, k, p);
+	                dest = (unsigned *)(slave_core_addr + (unsigned)src_addr);
+	                e_memcopy(dest, xt, IN_ROWS*sizeof(float));
 	                e_irq_set(j, k, E_SYNC);
 	            }
 	        }
 		}
 
-		// TODO: Calculate inference and update clock cycles
+		(*(sample_no)) = 4;
+
+        (*(sample_no)) = 5;
 
 		while (1) {
             all_done = 0;
 
             for (j = 0; j < N; ++j) {
-                all_done += done[l];
+                slave_done_flag = (unsigned *)(DONE_MEM_ADDR + j*sizeof(int));
+                all_done += *slave_done_flag;
             }
 
             if (all_done == N) {
-                done[0] = 0;
-                done[1] = 0;
-                done[2] = 0;
                 break;
             }
         }
+
+        (*(sample_no)) = 6;
+
+        slave_inf_clks = (unsigned *)INF_CLKS_MEM_ADDR;
+        slave_up_clks = (unsigned *)UP_CLKS_MEM_ADDR;
+        slave_done_flag = (unsigned *)DONE_MEM_ADDR;
+        inf_clks = 0;
+        up_clks = 0;
+
+        for (j = 0; j < N; ++j) {
+            slave_inf_clks = slave_inf_clks + j;
+            inf_clks += *slave_inf_clks;
+            *slave_inf_clks = 0;
+
+            slave_up_clks = slave_up_clks + j;
+            up_clks += *slave_up_clks;
+            *slave_up_clks = 0;
+
+            slave_done_flag = slave_done_flag + j;
+            *slave_done_flag = 0;
+        }
+
+        // Write benchmark results
+        (*(sample_no)) = i;
+        (*(total_inf_clks)) = inf_clks;
+        (*(total_up_clks)) = up_clks;
+        (*(masternode_clks)) = E_CTIMER_MAX - e_ctimer_get(E_CTIMER_0);
 	}
 
 	// Raising "done" flag for host
-    (*(done_flag)) = 0x00000001;
+    (*(all_done_flag)) = 0x00000001;
 
 	// Put core in idle state
     __asm__ __volatile__("idle");
