@@ -8,15 +8,10 @@
 #define SHM_OFFSET 0x01000000
 
 int main(int argc, char *argv[]) {
-    float input_data[IN_ROWS][IN_COLS], data_point, dictionary_w[IN_ROWS][N], update_wk[IN_ROWS], dual_var[IN_ROWS], secs, avg_inf_clks, avg_up_clks;
-    int current_row, current_col, i, all_done, total_inf_clks, total_up_clks, t, clr = 0x00000000;
+    float input_data[IN_ROWS][IN_COLS], data_point, dictionary_w[IN_ROWS][N], update_wk[IN_ROWS], dual_var[IN_ROWS], secs;
+    int current_row, current_col, i, all_done, avg_inf_clks, avg_up_clks, total_inf_clks, total_up_clks, t, last_t, clr;
     char path[100] = "../data/data.txt";
-#ifdef USE_MASTER_NODE
-    int masternode_clks;
-#else
-    int done[N], j;
-    float xt[IN_ROWS];
-#endif
+    clr = CLEAR_FLAG;
 
     // Seed the random number generator
     srand(1);
@@ -67,11 +62,7 @@ int main(int argc, char *argv[]) {
 	e_set_host_verbosity(H_D0);
 
     // Open the workgroup
-#ifdef USE_MASTER_NODE
-	e_open(&dev, 0, 0, 1, N + 1);
-#else
-    e_open(&dev, 0, 0, 1, N);
-#endif
+	e_open(&dev, 0, 0, 1, N + MASTER_NODE);
     e_reset_group(&dev);
 
     // Initialise update dictionary and dual variable vectors with 0
@@ -93,7 +84,7 @@ int main(int argc, char *argv[]) {
 
 #ifdef USE_MASTER_NODE
     // Allocate shared memory
-    if (e_alloc(&mbuf, SHM_OFFSET, IN_ROWS*IN_COLS*sizeof(float) + 5*sizeof(int)) != E_OK) {
+    if (e_alloc(&mbuf, SHM_OFFSET, IN_ROWS*IN_COLS*sizeof(float) + MASTER_ADDR_NUM*sizeof(int)) != E_OK) {
         printf("Error: Failed to allocate shared memory\n");
         return EXIT_FAILURE;
     };
@@ -102,26 +93,21 @@ int main(int argc, char *argv[]) {
     e_write(&mbuf, 0, 0, 0x0, &input_data, IN_ROWS*IN_COLS*sizeof(float));
     // Clear done flag in shared memory
     e_write(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float), &clr, sizeof(int));
-#else
-    // Allocate shared memory
-    if (e_alloc(&mbuf, SHM_OFFSET, N*sizeof(int)) != E_OK) {
-        printf("Error: Failed to allocate shared memory\n");
-        return EXIT_FAILURE;
-    };
-#endif
 
     // Load program to the workgroup but do not run yet
     if (e_load_group("e_microarray_biclustering.srec", &dev, 0, 0, 1, N, E_FALSE) != E_OK) {
         printf("Error: Failed to load e_microarray_biclustering.srec\n");
         return EXIT_FAILURE;
     }
-
-#ifdef USE_MASTER_NODE
     // Load program to the master core but do not run yet
     if (e_load("e_microarray_biclustering_master.srec", &dev, 0, N, E_FALSE) != E_OK) {
         printf("Error: Failed to load e_microarray_biclustering_master.srec\n");
         return EXIT_FAILURE;
     }
+
+    int masternode_clks;
+    last_t = -1;
+    secs = 0.0f;
 
     // Start/wake workgroup
     e_start_group(&dev);
@@ -133,23 +119,26 @@ int main(int argc, char *argv[]) {
         e_read(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float) + (3*sizeof(int)), &total_up_clks, sizeof(int));
         e_read(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float) + (4*sizeof(int)), &masternode_clks, sizeof(int));
 
-        secs = masternode_clks / E_CYCLES;
-        avg_inf_clks = total_inf_clks * ONE_OVER_N;
-        avg_up_clks = total_up_clks * ONE_OVER_N;
+        if (t - last_t) {
+            secs += masternode_clks / E_CYCLES;
+            avg_inf_clks = (int)(total_inf_clks * ONE_OVER_N);
+            avg_up_clks = (int)(total_up_clks * ONE_OVER_N);
+            last_t = t;
 
-        printf("\nConfiguration: Master Node\n");
-        printf("-------------------------------\n");
-        printf("Processed input sample: %i\n", t);
-        printf("Average clock cycles for inference step: %.2f clock cycles\n", avg_inf_clks);
-        printf("Average network speed of inference step: %.2f seconds\n", avg_inf_clks / E_CYCLES);
-        printf("Average clock cycles for update step: %.2f clock cycles\n", avg_up_clks);
-        printf("Average network speed of update step: %.2f seconds\n", avg_up_clks / E_CYCLES);
-        printf("-------------------------------\n");
-        printf("Percent complete: %.2f%%\n", (t+1)*100.0f/IN_COLS);
-        printf("Average speed: %.2f seconds/sample\n", secs/(t+1));
-        printf("Time elapsed: %.2f seconds\n", secs);
-        printf("Total time estimate: %.2f seconds\n", (secs/(t+1))*IN_COLS);
-        printf("Remaining time estimate: %.2f seconds\n\n", (secs/(t+1))*IN_COLS - secs);
+            printf("\nConfiguration: Master Node\n");
+            printf("-------------------------------\n");
+            printf("Processed input sample: %i\n", t);
+            printf("Average clock cycles for inference step: %i clock cycles\n", avg_inf_clks);
+            printf("Average network speed of inference step: %.6f seconds\n", avg_inf_clks / E_CYCLES);
+            printf("Average clock cycles for update step: %i clock cycles\n", avg_up_clks);
+            printf("Average network speed of update step: %.6f seconds\n", avg_up_clks / E_CYCLES);
+            printf("-------------------------------\n");
+            printf("Percent complete: %.2f%%\n", (t+1)*100.0f/IN_COLS);
+            printf("Average speed: %.2f seconds/sample\n", secs/(t+1));
+            printf("Time elapsed: %.2f seconds\n", secs);
+            printf("Total time estimate: %.2f seconds\n", (secs/(t+1))*IN_COLS);
+            printf("Remaining time estimate: %.2f seconds\n\n", (secs/(t+1))*IN_COLS - secs);
+        }
 
         if (all_done == 1) {
             printf("Done.");
@@ -158,7 +147,23 @@ int main(int argc, char *argv[]) {
 
         // Wipe output
     }
+
 #else
+    // Allocate shared memory
+    if (e_alloc(&mbuf, SHM_OFFSET, N*sizeof(int)) != E_OK) {
+        printf("Error: Failed to allocate shared memory\n");
+        return EXIT_FAILURE;
+    };
+
+    // Load program to the workgroup but do not run yet
+    if (e_load_group("e_microarray_biclustering.srec", &dev, 0, 0, 1, N, E_FALSE) != E_OK) {
+        printf("Error: Failed to load e_microarray_biclustering.srec\n");
+        return EXIT_FAILURE;
+    }
+
+    int done[N], j;
+    float xt[IN_ROWS];
+
     clock_t start = clock(), diff;
 
     for (t = 0; t < IN_COLS; ++t) {
@@ -199,7 +204,7 @@ int main(int argc, char *argv[]) {
         // Wipe output
     }
 
-    printf("Done.")
+    printf("Done.");
 #endif
 
     e_close(&dev);

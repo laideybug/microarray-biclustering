@@ -35,7 +35,7 @@ e-gcc -Wall -funroll-loops -O3 -T ${ELDF} src/e_microarray_biclustering.c src/st
 e-objcopy --srec-forceS3 --output-target srec bin/e_microarray_biclustering.elf bin/e_microarray_biclustering.srec
 
 # Build DEVICE side program
-e-gcc -Wall -funroll-loops -O3 -T ${ELDF} src/e_microarray_biclustering_master.c src/static_buffers.c -o bin/e_microarray_biclustering_master.elf -le-lib
+e-gcc -Wall -funroll-loops -O3 -T ${ELDF} src/e_microarray_biclustering_master.c -o bin/e_microarray_biclustering_master.elf -le-lib
 
 # Convert ebinary to SREC file
 e-objcopy --srec-forceS3 --output-target srec bin/e_microarray_biclustering_master.elf bin/e_microarray_biclustering_master.srec
