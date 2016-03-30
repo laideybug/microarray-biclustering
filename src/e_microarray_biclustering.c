@@ -2,20 +2,17 @@
 #include <math.h>
 #include <string.h>
 #include "common.h"
+#include "e_microarray_biclustering_utils.h"
 #include "static_buffers.h"
 
 void adjustScaling(float scaling);
 float sign(float value);
 void syncISR(int x);
-#ifdef USE_MASTER_NODE
-void usrISR(int x);
-volatile int write_msg_cnt;
-#endif
 
 int main(void) {
 	unsigned *xt, *wk, *update_wk, *nu_opt, *nu_k, *ready_flag, *done_flag, *inf_clks, *up_clks, *dest, *p;
 	unsigned volatile *nu_k0, *nu_k1, *nu_k2;
-	unsigned slave_core, j, k, nu_src_addr, ready_flag_addr, done_flag_addr, inf_clks_addr, up_clks_addr, out_mem_offset, timer_value_0, timer_value_1;
+	unsigned slave_core, j, nu_src_addr, ready_flag_addr, done_flag_addr, inf_clks_addr, up_clks_addr, out_mem_offset, timer_value_0, timer_value_1;
 	float subgrad[IN_ROWS], scaling, rms_wk, rms_wk_reciprocol;
 	int i, reps;
 
@@ -31,12 +28,13 @@ int main(void) {
     out_mem_offset = (unsigned)(e_group_config.core_col*sizeof(int));
 
 #ifdef USE_MASTER_NODE
-	unsigned master_node_addr = (unsigned)e_get_global_address(0, N, p);
+    unsigned master_node_addr = (unsigned)e_get_global_address_on_chip(MASTER_NODE_ROW, MASTER_NODE_COL, p);
 	inf_clks_addr = master_node_addr + (unsigned)INF_CLKS_MEM_ADDR + out_mem_offset;
 	up_clks_addr = master_node_addr + (unsigned)UP_CLKS_MEM_ADDR + out_mem_offset;
 	done_flag_addr = master_node_addr + (unsigned)DONE_MEM_ADDR + out_mem_offset;
 	ready_flag_addr = master_node_addr + (unsigned)READY_MEM_ADDR + out_mem_offset;
 	ready_flag = (unsigned *)ready_flag_addr;
+	p = CLEAR_FLAG;
 #else
     //inf_clks_addr = master_node_addr + (unsigned)INF_CLKS_MEM_ADDR + out_mem_offset;
 	//up_clks_addr = master_node_addr + (unsigned)UP_CLKS_MEM_ADDR + out_mem_offset;
@@ -57,20 +55,14 @@ int main(void) {
     // Re-enable interrupts
     e_irq_attach(E_SYNC, syncISR);
     e_irq_mask(E_SYNC, E_FALSE);
-    e_irq_attach(E_USER_INT, usrISR);
-    e_irq_mask(E_USER_INT, E_FALSE);
     e_irq_global_mask(E_FALSE);
-
-    write_msg_cnt = 0;
 
 #ifdef USE_MASTER_NODE
     (*(ready_flag)) = SET_FLAG;
-#else
-#ifdef USE_BARRIER
+#endif
+
     // Initialise barriers
     e_barrier_init(barriers, tgt_bars);
-#endif
-#endif
 
     while (1) {
 #ifdef USE_MASTER_NODE
@@ -99,27 +91,17 @@ int main(void) {
 				nu_k[i] = wk[i] * (scaling * -MU_2);
 			}
 
-	        // Exchange dual variable estimates
-			for (j = 0; j < e_group_config.group_rows; ++j) {
-	            for (k = 0; k < N; ++k) {
-	                if ((j != e_group_config.core_row) | (k != e_group_config.core_col)) {
-                        slave_core = (unsigned)e_get_global_address(j, k, p);
-	                    dest = (unsigned *)(slave_core + (unsigned)nu_src_addr);
-	                    e_memcopy(dest, nu_k, IN_ROWS*sizeof(float));
-	                    //nu_flag = (unsigned *)(slave_core + (unsigned)NU_K_FLAG_ADDR + k*sizeof(int));
-	                    //(*(nu_flag)) = 0x00000001;
-	                    e_irq_set((unsigned)j, (unsigned)k, E_USER_INT);
-	                }
-	            }
-			}
+	        // Exchange dual variable estimates along row
+            for (j = 0; j < e_group_config.group_cols; ++j) {
+                if (j != e_group_config.core_col) {
+                    slave_core = (unsigned)e_get_global_address(e_group_config.core_row, j, p);
+                    dest = (unsigned *)(slave_core + (unsigned)nu_src_addr);
+                    e_memcopy(dest, nu_k, IN_ROWS*sizeof(float));
+                }
+            }
 
-#ifdef USE_BARRIER
 	    	// Synch with all other cores
 	    	e_barrier(barriers, tgt_bars);
-#else
-            while (write_msg_cnt < 1);
-            write_msg_cnt = 0;
-#endif
 
 	    	// Average dual variable estimates
 			for (i = 0; i < IN_ROWS; ++i) {
@@ -229,19 +211,5 @@ inline float sign(float value) {
 */
 
 void __attribute__((interrupt)) syncISR(int x) {
-    return;
-}
-
-/*
-* Function: syncISR
-* -----------------
-* Override sync function
-*
-* x: arbitrary value
-*
-*/
-
-void __attribute__((interrupt)) usrISR(int x) {
-    write_msg_cnt = write_msg_cnt + 1;
     return;
 }

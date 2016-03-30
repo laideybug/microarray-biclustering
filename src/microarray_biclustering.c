@@ -62,7 +62,7 @@ int main(int argc, char *argv[]) {
 	e_set_host_verbosity(H_D0);
 
     // Open the workgroup
-	e_open(&dev, 0, 0, 1, N + MASTER_NODE);
+	e_open(&dev, 0, 0, M, N);
     e_reset_group(&dev);
 
     // Initialise update dictionary and dual variable vectors with 0
@@ -82,7 +82,18 @@ int main(int argc, char *argv[]) {
         e_write(&dev, 0, i, NU_K2_MEM_ADDR, &dual_var, IN_ROWS*sizeof(float));
     }
 
+     // Load program to the workgroup but do not run yet
+    if (e_load_group("e_microarray_biclustering.srec", &dev, 0, 0, 1, N, E_FALSE) != E_OK) {
+        printf("Error: Failed to load e_microarray_biclustering.srec\n");
+        return EXIT_FAILURE;
+    }
+
 #ifdef USE_MASTER_NODE
+    // Open the master node workgroup
+    e_epiphany_t dev_master;
+	e_open(&dev_master, MASTER_NODE_ROW, MASTER_NODE_COL, 1, 1);
+    e_reset_group(&dev_master);
+
     // Allocate shared memory
     if (e_alloc(&mbuf, SHM_OFFSET, IN_ROWS*IN_COLS*sizeof(float) + MASTER_ADDR_NUM*sizeof(int)) != E_OK) {
         printf("Error: Failed to allocate shared memory\n");
@@ -94,13 +105,8 @@ int main(int argc, char *argv[]) {
     // Clear done flag in shared memory
     e_write(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float), &clr, sizeof(int));
 
-    // Load program to the workgroup but do not run yet
-    if (e_load_group("e_microarray_biclustering.srec", &dev, 0, 0, 1, N, E_FALSE) != E_OK) {
-        printf("Error: Failed to load e_microarray_biclustering.srec\n");
-        return EXIT_FAILURE;
-    }
     // Load program to the master core but do not run yet
-    if (e_load("e_microarray_biclustering_master.srec", &dev, 0, N, E_FALSE) != E_OK) {
+    if (e_load("e_microarray_biclustering_master.srec", &dev_master, 0, 0, E_FALSE) != E_OK) {
         printf("Error: Failed to load e_microarray_biclustering_master.srec\n");
         return EXIT_FAILURE;
     }
@@ -111,6 +117,7 @@ int main(int argc, char *argv[]) {
 
     // Start/wake workgroup
     e_start_group(&dev);
+    e_start_group(&dev_master);
 
     while (1) {
         e_read(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float), &all_done, sizeof(int));
@@ -119,7 +126,7 @@ int main(int argc, char *argv[]) {
         e_read(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float) + (3*sizeof(int)), &total_up_clks, sizeof(int));
         e_read(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float) + (4*sizeof(int)), &masternode_clks, sizeof(int));
 
-        if (t - last_t) {
+        //if (t - last_t) {
             secs += masternode_clks / E_CYCLES;
             avg_inf_clks = (int)(total_inf_clks * ONE_OVER_N);
             avg_up_clks = (int)(total_up_clks * ONE_OVER_N);
@@ -138,7 +145,7 @@ int main(int argc, char *argv[]) {
             printf("Time elapsed: %.2f seconds\n", secs);
             printf("Total time estimate: %.2f seconds\n", (secs/(t+1))*IN_COLS);
             printf("Remaining time estimate: %.2f seconds\n\n", (secs/(t+1))*IN_COLS - secs);
-        }
+        //}
 
         if (all_done == 1) {
             printf("Done.");
