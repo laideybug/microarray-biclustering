@@ -9,12 +9,17 @@
 
 int main(int argc, char *argv[]) {
     float input_data[IN_ROWS][IN_COLS], data_point, dictionary_w[IN_ROWS][N], update_wk[IN_ROWS], dual_var[IN_ROWS], secs;
-    int current_row, current_col, i, all_done, avg_inf_clks, avg_up_clks, total_inf_clks, total_up_clks, t, last_t, clr;
+    int current_row, current_col, i, all_done, avg_inf_clks, avg_up_clks, inf_clks, total_inf_clks, up_clks, total_up_clks, t, clr;
     char path[100] = "../data/data.txt";
     clr = CLEAR_FLAG;
+#ifdef USE_MASTER_NODE
+    int last_t;
+#endif
 
     // Seed the random number generator
     srand(1);
+
+    printf("\nReading input data...\n");
 
     // Read input data
     FILE *file;
@@ -48,6 +53,8 @@ int main(int argc, char *argv[]) {
     removeDC(IN_ROWS, IN_COLS, input_data);
     // Initialise the dictionaries
     initDictionary(IN_ROWS, N, dictionary_w);
+
+    printf("Initialising network...\n");
 
     // Epiphany setup
     e_platform_t platform;
@@ -83,7 +90,7 @@ int main(int argc, char *argv[]) {
     }
 
      // Load program to the workgroup but do not run yet
-    if (e_load_group("e_microarray_biclustering.srec", &dev, 0, 0, 1, N, E_FALSE) != E_OK) {
+    if (e_load_group("e_microarray_biclustering.srec", &dev, 0, 0, M, N, E_FALSE) != E_OK) {
         printf("Error: Failed to load e_microarray_biclustering.srec\n");
         return EXIT_FAILURE;
     }
@@ -116,8 +123,10 @@ int main(int argc, char *argv[]) {
     secs = 0.0f;
 
     // Start/wake workgroup
-    e_start_group(&dev);
     e_start_group(&dev_master);
+    e_start_group(&dev);
+
+    printf("Network started...\n\n");
 
     while (1) {
         e_read(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float), &all_done, sizeof(int));
@@ -126,50 +135,52 @@ int main(int argc, char *argv[]) {
         e_read(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float) + (3*sizeof(int)), &total_up_clks, sizeof(int));
         e_read(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float) + (4*sizeof(int)), &masternode_clks, sizeof(int));
 
-        //if (t - last_t) {
-            secs += masternode_clks / E_CYCLES;
+        if (t - last_t) {
             avg_inf_clks = (int)(total_inf_clks * ONE_OVER_N);
             avg_up_clks = (int)(total_up_clks * ONE_OVER_N);
             last_t = t;
+            secs += masternode_clks / E_CYCLES;
 
             printf("\nConfiguration: Master Node\n");
             printf("-------------------------------\n");
             printf("Processed input sample: %i\n", t);
             printf("Average clock cycles for inference step: %i clock cycles\n", avg_inf_clks);
-            printf("Average network speed of inference step: %.6f seconds\n", avg_inf_clks / E_CYCLES);
+            printf("Average network speed of inference step: %.6f seconds\n", avg_inf_clks * ONE_OVER_E_CYCLES);
             printf("Average clock cycles for update step: %i clock cycles\n", avg_up_clks);
-            printf("Average network speed of update step: %.6f seconds\n", avg_up_clks / E_CYCLES);
+            printf("Average network speed of update step: %.6f seconds\n", avg_up_clks / ONE_OVER_E_CYCLES);
             printf("-------------------------------\n");
             printf("Percent complete: %.2f%%\n", (t+1)*100.0f/IN_COLS);
             printf("Average speed: %.2f seconds/sample\n", secs/(t+1));
             printf("Time elapsed: %.2f seconds\n", secs);
             printf("Total time estimate: %.2f seconds\n", (secs/(t+1))*IN_COLS);
             printf("Remaining time estimate: %.2f seconds\n\n", (secs/(t+1))*IN_COLS - secs);
-        //}
+        }
 
         if (all_done == 1) {
             printf("Done.");
             break;
         }
-
-        // Wipe output
     }
+
+    e_close(&dev_master);
 
 #else
     // Allocate shared memory
-    if (e_alloc(&mbuf, SHM_OFFSET, N*sizeof(int)) != E_OK) {
+    if (e_alloc(&mbuf, SHM_OFFSET, N*N*sizeof(int)) != E_OK) {
         printf("Error: Failed to allocate shared memory\n");
         return EXIT_FAILURE;
     };
 
     // Load program to the workgroup but do not run yet
-    if (e_load_group("e_microarray_biclustering.srec", &dev, 0, 0, 1, N, E_FALSE) != E_OK) {
+    if (e_load_group("e_microarray_biclustering.srec", &dev, 0, 0, M, N, E_FALSE) != E_OK) {
         printf("Error: Failed to load e_microarray_biclustering.srec\n");
         return EXIT_FAILURE;
     }
 
     int done[N], j;
     float xt[IN_ROWS];
+
+    printf("Network started...\n\n");
 
     clock_t start = clock(), diff;
 
@@ -197,18 +208,35 @@ int main(int argc, char *argv[]) {
             }
         }
 
+        total_inf_clks = 0;
+        total_up_clks = 0;
+
+        for (j = 0; j < N; ++j) {
+            e_read(&mbuf, 0, 0, j*sizeof(int) + (3*sizeof(int)), &inf_clks, sizeof(int));
+            total_inf_clks += inf_clks;
+            e_read(&mbuf, 0, 0, j*sizeof(int) + (6*sizeof(int)), &up_clks, sizeof(int));
+            total_up_clks += up_clks;
+        }
+
+        avg_inf_clks = (int)(total_inf_clks * ONE_OVER_N);
+        avg_up_clks = (int)(total_up_clks * ONE_OVER_N);
+
         diff = clock() - start;
         secs = diff / CLOCKS_PER_SEC;
 
         printf("\nConfiguration: ARM\n");
-        printf("Processed input sample: %i\n", i);
-        printf("Percent complete: %.2f%%\n", (i+1)*100.0f/IN_COLS);
-        printf("Average speed: %.2f seconds/sample\n", secs/(i+1));
+        printf("-------------------------------\n");
+        printf("Processed input sample: %i\n", t);
+        printf("Average clock cycles for inference step: %i clock cycles\n", avg_inf_clks);
+        printf("Average network speed of inference step: %.6f seconds\n", avg_inf_clks * ONE_OVER_E_CYCLES);
+        printf("Average clock cycles for update step: %i clock cycles\n", avg_up_clks);
+        printf("Average network speed of update step: %.6f seconds\n", avg_up_clks * ONE_OVER_E_CYCLES);
+        printf("-------------------------------\n");
+        printf("Percent complete: %.2f%%\n", (t+1)*100.0f*ONE_OVER_IN_COLS);
+        printf("Average speed: %.2f seconds/sample\n", secs/(t+1));
         printf("Time elapsed: %.2f seconds\n", secs);
-        printf("Total time: %.2f seconds\n", (secs/(i+1))*IN_COLS);
-        printf("Remaining time: %.2f seconds\n\n", (secs/(i+1))*IN_COLS - secs);
-
-        // Wipe output
+        printf("Total time: %.2f seconds\n", (secs/(t+1))*IN_COLS);
+        printf("Remaining time: %.2f seconds\n\n", (secs/(t+1))*IN_COLS - secs);
     }
 
     printf("Done.");

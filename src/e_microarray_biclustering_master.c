@@ -22,8 +22,8 @@ int main(void) {
     src_addr = (unsigned)XT_MEM_ADDR;
     p = CLEAR_FLAG;
 
-    // Initialise to 0
-    (*(sample_no)) = 0;
+    // Initialise benchmark results
+    (*(sample_no)) = -1;
     (*(total_inf_clks)) = 0;
     (*(total_up_clks)) = 0;
     (*(masternode_clks)) = 0;
@@ -33,7 +33,7 @@ int main(void) {
         all_ready = 0;
 
         for (i = 0; i < N; ++i) {
-            slave_ready_flag = (unsigned *)(READY_MEM_ADDR + i*sizeof(int));
+            slave_ready_flag = (unsigned *)((unsigned)READY_MEM_ADDR + i*sizeof(int));
             all_ready += *slave_ready_flag;
         }
 
@@ -42,25 +42,12 @@ int main(void) {
         }
     }
 
-    (*(sample_no)) = 35;
-
 	for (i = 0; i < IN_COLS; ++i) {
         e_ctimer_set(E_CTIMER_0, E_CTIMER_MAX);
         e_ctimer_start(E_CTIMER_0, E_CTIMER_CLK);
 
 		xt_addr = (unsigned)SHMEM_ADDR + (i*IN_ROWS*sizeof(float));
 		xt = (unsigned *)xt_addr;
-
-		//for (j = 0; j < e_group_config.group_rows; ++j) {
-	    //    for (k = 0; k < e_group_config.group_cols; ++k) {
-	    //        if ((j != e_group_config.core_row) | (k != e_group_config.core_col)) {
-        //            slave_core_addr = (unsigned)e_get_global_address(j, k, p);
-	    //            dest = (unsigned *)(slave_core_addr + (unsigned)src_addr);
-	    //            e_memcopy(dest, xt, IN_ROWS*sizeof(float));
-	    //            e_irq_set((unsigned)j, (unsigned)k, E_SYNC);
-	    //        }
-	    //    }
-	//	}
 
         for (j = 0; j < M; ++j) {
             for (k = 0; k < N; ++k) {
@@ -75,7 +62,7 @@ int main(void) {
             all_done = 0;
 
             for (j = 0; j < N; ++j) {
-                slave_done_flag = (unsigned *)(DONE_MEM_ADDR + j*sizeof(int));
+                slave_done_flag = (unsigned *)((unsigned)DONE_MEM_ADDR + j*sizeof(int));
                 all_done += *slave_done_flag;
             }
 
@@ -88,20 +75,20 @@ int main(void) {
         up_clks = 0;
 
         for (j = 0; j < N; ++j) {
-            slave_inf_clks = (unsigned *)(INF_CLKS_MEM_ADDR + j*sizeof(int));
+            slave_inf_clks = (unsigned *)((unsigned)INF_CLKS_MEM_ADDR + j*sizeof(int));
             inf_clks += *slave_inf_clks;
             *slave_inf_clks = 0;
 
-            slave_up_clks = (unsigned *)(UP_CLKS_MEM_ADDR + j*sizeof(int));
+            slave_up_clks = (unsigned *)((unsigned)UP_CLKS_MEM_ADDR + j*sizeof(int));
             up_clks += *slave_up_clks;
             *slave_up_clks = 0;
 
-            slave_done_flag = (unsigned *)(DONE_MEM_ADDR + j*sizeof(int));
+            slave_done_flag = (unsigned *)((unsigned)DONE_MEM_ADDR + j*sizeof(int));
             *slave_done_flag = 0;
         }
 
         // Write benchmark results
-        //(*(sample_no)) = i;
+        (*(sample_no)) = i;
         (*(total_inf_clks)) = inf_clks;
         (*(total_up_clks)) = up_clks;
         (*(masternode_clks)) = E_CTIMER_MAX - e_ctimer_stop(E_CTIMER_0);

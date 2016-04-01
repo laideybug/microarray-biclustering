@@ -10,11 +10,15 @@ float sign(float value);
 void syncISR(int x);
 
 int main(void) {
-	unsigned *xt, *wk, *update_wk, *nu_opt, *nu_k, *ready_flag, *done_flag, *inf_clks, *up_clks, *dest, *p;
+	unsigned *xt, *wk, *update_wk, *nu_opt, *nu_k, *done_flag, *inf_clks, *up_clks, *dest, *p;
 	unsigned volatile *nu_k0, *nu_k1, *nu_k2;
-	unsigned slave_core, j, nu_src_addr, ready_flag_addr, done_flag_addr, inf_clks_addr, up_clks_addr, out_mem_offset, timer_value_0, timer_value_1;
+	unsigned slave_core, j, nu_src_addr, done_flag_addr, inf_clks_addr, up_clks_addr, out_mem_offset, timer_value_0, timer_value_1;
 	float subgrad[IN_ROWS], scaling, rms_wk, rms_wk_reciprocol;
 	int i, reps;
+#ifdef USE_MASTER_NODE
+    unsigned ready_flag_addr;
+    unsigned *ready_flag;
+#endif
 
 	xt = (unsigned *)XT_MEM_ADDR;	            // Address of xt (56 x 1)
 	wk = (unsigned *)WK_MEM_ADDR;	            // Address of dictionary atom (56 x 1)
@@ -34,11 +38,10 @@ int main(void) {
 	done_flag_addr = master_node_addr + (unsigned)DONE_MEM_ADDR + out_mem_offset;
 	ready_flag_addr = master_node_addr + (unsigned)READY_MEM_ADDR + out_mem_offset;
 	ready_flag = (unsigned *)ready_flag_addr;
-	p = CLEAR_FLAG;
 #else
-    //inf_clks_addr = master_node_addr + (unsigned)INF_CLKS_MEM_ADDR + out_mem_offset;
-	//up_clks_addr = master_node_addr + (unsigned)UP_CLKS_MEM_ADDR + out_mem_offset;
     done_flag_addr = (unsigned)SHMEM_ADDR + out_mem_offset;
+    inf_clks_addr = (unsigned)SHMEM_ADDR + + (3*sizeof(int)) + out_mem_offset;
+	up_clks_addr = (unsigned)SHMEM_ADDR + + (6*sizeof(int)) + out_mem_offset;
 #endif
 
     inf_clks = (unsigned *)inf_clks_addr;

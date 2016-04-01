@@ -22,7 +22,7 @@ void *e_get_global_address_on_chip(unsigned row, unsigned col, const void *ptr) 
         return (void *)uptr;
     }
 
-    coreid = (row * 0x40 + col) + CORE_0_0_ADDR;
+    coreid = (row + PLATFORM_ROW) * 0x40 + col + PLATFORM_COL;
     uptr = (unsigned)ptr;
     uptr = (coreid << 20) | uptr;
 
