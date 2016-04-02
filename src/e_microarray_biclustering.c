@@ -3,11 +3,11 @@
 #include <string.h>
 #include "common.h"
 #include "e_microarray_biclustering_utils.h"
-#include "static_buffers.h"
+#include "e_synch.h"
 
 void adjustScaling(float scaling);
 float sign(float value);
-void syncISR(int x);
+void sync_isr(int x);
 
 int main(void) {
 	unsigned *xt, *wk, *update_wk, *nu_opt, *nu_k, *done_flag, *inf_clks, *up_clks, *dest, *p;
@@ -15,10 +15,6 @@ int main(void) {
 	unsigned slave_core, j, nu_src_addr, done_flag_addr, inf_clks_addr, up_clks_addr, out_mem_offset, timer_value_0, timer_value_1;
 	float subgrad[IN_ROWS], scaling, rms_wk, rms_wk_reciprocol;
 	int i, reps;
-#ifdef USE_MASTER_NODE
-    unsigned ready_flag_addr;
-    unsigned *ready_flag;
-#endif
 
 	xt = (unsigned *)XT_MEM_ADDR;	            // Address of xt (56 x 1)
 	wk = (unsigned *)WK_MEM_ADDR;	            // Address of dictionary atom (56 x 1)
@@ -36,8 +32,8 @@ int main(void) {
 	inf_clks_addr = master_node_addr + (unsigned)INF_CLKS_MEM_ADDR + out_mem_offset;
 	up_clks_addr = master_node_addr + (unsigned)UP_CLKS_MEM_ADDR + out_mem_offset;
 	done_flag_addr = master_node_addr + (unsigned)DONE_MEM_ADDR + out_mem_offset;
-	ready_flag_addr = master_node_addr + (unsigned)READY_MEM_ADDR + out_mem_offset;
-	ready_flag = (unsigned *)ready_flag_addr;
+	unsigned ready_flag_addr = master_node_addr + (unsigned)READY_MEM_ADDR + out_mem_offset;
+	unsigned *ready_flag = (unsigned *)ready_flag_addr;
 #else
     done_flag_addr = (unsigned)SHMEM_ADDR + out_mem_offset;
     inf_clks_addr = (unsigned)SHMEM_ADDR + + (3*sizeof(int)) + out_mem_offset;
@@ -56,7 +52,7 @@ int main(void) {
     nu_k = (unsigned *)nu_src_addr;    // Address of this cores dual variable estimate
 
     // Re-enable interrupts
-    e_irq_attach(E_SYNC, syncISR);
+    e_irq_attach(E_SYNC, sync_isr);
     e_irq_mask(E_SYNC, E_FALSE);
     e_irq_global_mask(E_FALSE);
 
@@ -79,7 +75,7 @@ int main(void) {
         e_ctimer_start(E_CTIMER_0, E_CTIMER_CLK);
 
 		for (reps = 0; reps < NUM_ITER; ++reps) {
-			for (i = 0; i < IN_ROWS; ++i) {
+			for (i = 0; i < WK_ROWS; ++i) {
 				/* subgrad = (nu-xt)*minus_mu_over_N */
 				subgrad[i] = nu_opt[i] - xt[i];
 				subgrad[i] = subgrad[i] * (-MU_2 * ONE_OVER_N);
@@ -89,7 +85,7 @@ int main(void) {
 
 			adjustScaling(scaling);
 
-			for (i = 0; i < IN_ROWS; ++i) {
+			for (i = 0; i < WK_ROWS; ++i) {
 				/* D * diagmat(scaling*my_minus_mu) */
 				nu_k[i] = wk[i] * (scaling * -MU_2);
 			}
@@ -99,15 +95,15 @@ int main(void) {
                 if (j != e_group_config.core_col) {
                     slave_core = (unsigned)e_get_global_address(e_group_config.core_row, j, p);
                     dest = (unsigned *)(slave_core + (unsigned)nu_src_addr);
-                    e_memcopy(dest, nu_k, IN_ROWS*sizeof(float));
+                    e_memcopy(dest, nu_k, WK_ROWS*sizeof(float));
                 }
             }
 
 	    	// Synch with all other cores
-	    	e_barrier(barriers, tgt_bars);
+            e_barrier(barriers, tgt_bars);
 
 	    	// Average dual variable estimates
-			for (i = 0; i < IN_ROWS; ++i) {
+			for (i = 0; i < WK_ROWS; ++i) {
 	            nu_opt[i] = nu_opt[i] + subgrad[i] + ((nu_k0[i] + nu_k1[i] + nu_k2[i]) * ONE_OVER_N);
 			}
 		}
@@ -116,7 +112,7 @@ int main(void) {
 		e_ctimer_set(E_CTIMER_0, E_CTIMER_MAX);
 		e_ctimer_start(E_CTIMER_0, E_CTIMER_CLK);
 
-		for (i = 0; i < IN_ROWS; ++i) {
+		for (i = 0; i < WK_ROWS; ++i) {
 			/* scaling = (my_W_transpose*nu); */
 			scaling = scaling + wk[i] * nu_opt[i];
 		}
@@ -127,7 +123,7 @@ int main(void) {
 		rms_wk = 0.0f;
 
 		// Create update atom (Y_opt)
-		for (i = 0; i < IN_ROWS; ++i) {
+		for (i = 0; i < WK_ROWS; ++i) {
 			update_wk[i] =  MU_W * (nu_opt[i] * scaling);
 			wk[i] = wk[i] + update_wk[i];
 			wk[i] = fmax(abs(wk[i])-BETA*MU_W, 0.0f) * sign(wk[i]);
@@ -143,7 +139,7 @@ int main(void) {
 		if (rms_wk > 1.0f) {
             rms_wk_reciprocol = 1.0f / rms_wk;
 
-			for (i = 0; i < IN_ROWS; ++i) {
+			for (i = 0; i < WK_ROWS; ++i) {
 				wk[i] = wk[i] * rms_wk_reciprocol;
 			}
 		}
@@ -205,14 +201,14 @@ inline float sign(float value) {
 }
 
 /*
-* Function: syncISR
-* -----------------
+* Function: sync_isr
+* ------------------
 * Override sync function
 *
 * x: arbitrary value
 *
 */
 
-void __attribute__((interrupt)) syncISR(int x) {
+void __attribute__((interrupt)) sync_isr(int x) {
     return;
 }

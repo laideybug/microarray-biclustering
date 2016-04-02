@@ -29,7 +29,7 @@ esac
 ${CROSS_PREFIX}gcc -Wall -std=c99 -Os src/microarray_biclustering.c src/microarray_biclustering_utils.c -o bin/microarray_biclustering.elf ${EINCS} ${ELIBS} -le-hal -le-loader -lm
 
 # Build DEVICE side program
-e-gcc -Wall -funroll-loops -O3 -T ${ELDF} src/e_microarray_biclustering.c src/e_microarray_biclustering_utils.c src/static_buffers.c -o bin/e_microarray_biclustering.elf -le-lib -lm
+e-gcc -Wall -funroll-loops -O3 -T ${ELDF} src/e_microarray_biclustering.c src/e_microarray_biclustering_utils.c src/e_synch.c -o bin/e_microarray_biclustering.elf -le-lib -lm
 
 # Convert ebinary to SREC file
 e-objcopy --srec-forceS3 --output-target srec bin/e_microarray_biclustering.elf bin/e_microarray_biclustering.srec

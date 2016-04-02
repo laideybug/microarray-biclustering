@@ -19,19 +19,16 @@
 #define e_memcopy(dst, src, size) memcpy(dst, src, size)
 #endif
 
-#define USE_BARRIER
-
 // Platform constants
 #define PLATFORM_ROW        32
 #define PLATFORM_COL        8
-#define NETWORK_ADDR        0x80800000
-#define MASTER_ADDR         0x80B00000
 
 // Program constants
 #define IN_ROWS			    56
 #define ONE_OVER_IN_ROWS    0.017857143
 #define IN_COLS			    12625
 #define ONE_OVER_IN_COLS    7.920792079e-5
+#define WK_ROWS			    56
 #define M 				    1
 #define N 				    3
 #define ONE_OVER_N 		    0.333333333
@@ -49,9 +46,9 @@
 #define CLEAR_FLAG          0x00000000
 
 // Core speeds - cycles per second
-#define E_CYCLES            600000000.0   // 600MHz
+#define E_CYCLES            600e6   // 600MHz
 #define ONE_OVER_E_CYCLES   1.66666667e-9
-#define A_CYCLES            667000000.0   // 667Mhz
+#define A_CYCLES            667e6   // 667Mhz
 #define ONE_OVER_A_CYCLES   1.49925037e-9
 
 // Shared memory bast address

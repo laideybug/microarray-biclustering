@@ -9,11 +9,13 @@
 
 int main(int argc, char *argv[]) {
     float input_data[IN_ROWS][IN_COLS], data_point, dictionary_w[IN_ROWS][N], update_wk[IN_ROWS], dual_var[IN_ROWS], secs;
-    int current_row, current_col, i, all_done, avg_inf_clks, avg_up_clks, inf_clks, total_inf_clks, up_clks, total_up_clks, t, clr;
+    int current_row, current_col, i, all_done, avg_inf_clks, avg_up_clks, total_inf_clks, total_up_clks, t, clr;
     char path[100] = "../data/data.txt";
     clr = CLEAR_FLAG;
 #ifdef USE_MASTER_NODE
     int last_t;
+#else
+    int inf_clks, up_clks;
 #endif
 
     // Seed the random number generator
@@ -147,9 +149,9 @@ int main(int argc, char *argv[]) {
             printf("Average clock cycles for inference step: %i clock cycles\n", avg_inf_clks);
             printf("Average network speed of inference step: %.6f seconds\n", avg_inf_clks * ONE_OVER_E_CYCLES);
             printf("Average clock cycles for update step: %i clock cycles\n", avg_up_clks);
-            printf("Average network speed of update step: %.6f seconds\n", avg_up_clks / ONE_OVER_E_CYCLES);
+            printf("Average network speed of update step: %.6f seconds\n", avg_up_clks * ONE_OVER_E_CYCLES);
             printf("-------------------------------\n");
-            printf("Percent complete: %.2f%%\n", (t+1)*100.0f/IN_COLS);
+            printf("Percent complete: %.2f%%\n", (t+1)*100.0f*ONE_OVER_IN_COLS);
             printf("Average speed: %.2f seconds/sample\n", secs/(t+1));
             printf("Time elapsed: %.2f seconds\n", secs);
             printf("Total time estimate: %.2f seconds\n", (secs/(t+1))*IN_COLS);
