@@ -6,13 +6,14 @@
 
 // Configuration macros
 #define USE_MASTER_NODE
+#define USE_DMA
+
 #ifdef USE_MASTER_NODE
 #define MASTER_NODE         1
 #else
 #define MASTER_NODE         0
 #endif
 
-#define USE_DMA
 #ifdef USE_DMA
 #define e_memcopy(dst, src, size) e_dma_copy(dst, src, size)
 #else

@@ -13,7 +13,7 @@ int main(void) {
 	unsigned *xt, *wk, *update_wk, *nu_opt, *nu_k, *done_flag, *inf_clks, *up_clks, *dest, *p;
 	unsigned volatile *nu_k0, *nu_k1, *nu_k2;
 	unsigned slave_core, j, nu_src_addr, done_flag_addr, inf_clks_addr, up_clks_addr, out_mem_offset, timer_value_0, timer_value_1;
-	float subgrad[IN_ROWS], scaling, rms_wk, rms_wk_reciprocol;
+	float subgrad[WK_ROWS], scaling, rms_wk, rms_wk_reciprocol;
 	int i, reps;
 
 	xt = (unsigned *)XT_MEM_ADDR;	            // Address of xt (56 x 1)
