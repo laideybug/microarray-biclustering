@@ -1,7 +1,6 @@
 #include <e-lib.h>
 #include "common.h"
 #include "e_microarray_biclustering_utils.h"
-#include "static_buffers.h"
 
 int main(void) {
 	unsigned *dest, *xt, *all_done_flag, *total_inf_clks, *total_up_clks, *sample_no, *slave_ready_flag, *slave_done_flag, *slave_inf_clks, *slave_up_clks, *masternode_clks, *p;

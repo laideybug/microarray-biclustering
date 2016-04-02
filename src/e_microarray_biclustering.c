@@ -68,13 +68,14 @@ int main(void) {
         // Put core in idle state
         __asm__ __volatile__("idle");
 #endif
-        scaling = 0.0f;
 
         // Set timers for benchmarking
         e_ctimer_set(E_CTIMER_0, E_CTIMER_MAX);
         e_ctimer_start(E_CTIMER_0, E_CTIMER_CLK);
 
 		for (reps = 0; reps < NUM_ITER; ++reps) {
+            scaling = 0.0f;
+
 			for (i = 0; i < WK_ROWS; ++i) {
 				/* subgrad = (nu-xt)*minus_mu_over_N */
 				subgrad[i] = nu_opt[i] - xt[i];
@@ -111,6 +112,8 @@ int main(void) {
 		timer_value_0 = E_CTIMER_MAX - e_ctimer_stop(E_CTIMER_0);
 		e_ctimer_set(E_CTIMER_0, E_CTIMER_MAX);
 		e_ctimer_start(E_CTIMER_0, E_CTIMER_CLK);
+
+		scaling = 0.0f;
 
 		for (i = 0; i < WK_ROWS; ++i) {
 			/* scaling = (my_W_transpose*nu); */
