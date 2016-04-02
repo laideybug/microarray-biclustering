@@ -56,13 +56,13 @@
 #define SHMEM_ADDR          0x8f000000
 
 // Node memory addresses
-#define XT_MEM_ADDR         0x4300
-#define WK_MEM_ADDR         0x4530
-#define UP_WK_MEM_ADDR      0x4760
-#define NU_OPT_MEM_ADDR     0x4990
-#define NU_K0_MEM_ADDR      0x5220
-#define NU_K1_MEM_ADDR      0x5450
-#define NU_K2_MEM_ADDR      0x5680
+#define XT_MEM_ADDR         0x4000
+#define WK_MEM_ADDR         0x4230
+#define UP_WK_MEM_ADDR      0x4460
+#define NU_OPT_MEM_ADDR     0x4690
+#define NU_K0_MEM_ADDR      0x4920
+#define NU_K1_MEM_ADDR      0x5150
+#define NU_K2_MEM_ADDR      0x5380
 #define NU_MEM_OFFSET       0x0230
 
 // Master node macros and addresses
