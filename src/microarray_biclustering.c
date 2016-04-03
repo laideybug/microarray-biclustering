@@ -8,16 +8,20 @@
 #define SHM_OFFSET 0x01000000
 
 int main(int argc, char *argv[]) {
+    unsigned current_row, current_col, i, all_done, avg_inf_clks, avg_up_clks, total_inf_clks, total_up_clks, clr;
     float input_data[IN_ROWS][IN_COLS], data_point, dictionary_w[IN_ROWS][N], update_wk[IN_ROWS], dual_var[IN_ROWS], secs;
-    int current_row, current_col, i, all_done, avg_inf_clks, avg_up_clks, total_inf_clks, total_up_clks, t, clr;
+    int t;
     char path[100] = "../data/data.txt";
-    clr = CLEAR_FLAG;
 #ifdef USE_MASTER_NODE
+    unsigned masternode_clks;
     int last_t;
 #else
-    int inf_clks, up_clks;
+    unsigned inf_clks, up_clks;
+    float xt[IN_ROWS];
+    int done[N], j;
 #endif
 
+    clr = CLEAR_FLAG;
     // Seed the random number generator
     srand(1);
 
@@ -120,7 +124,6 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    int masternode_clks;
     last_t = -1;
     secs = 0.0f;
 
@@ -131,17 +134,17 @@ int main(int argc, char *argv[]) {
     printf("Network started...\n\n");
 
     while (1) {
-        e_read(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float), &all_done, sizeof(int));
-        e_read(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float) + sizeof(int), &t, sizeof(int));
-        e_read(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float) + (2*sizeof(int)), &total_inf_clks, sizeof(int));
-        e_read(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float) + (3*sizeof(int)), &total_up_clks, sizeof(int));
-        e_read(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float) + (4*sizeof(int)), &masternode_clks, sizeof(int));
+        e_read(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float), &all_done, sizeof(unsigned));
+        e_read(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float) + sizeof(unsigned), &t, sizeof(int));
+        e_read(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float) + (2*sizeof(unsigned)), &total_inf_clks, sizeof(unsigned));
+        e_read(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float) + (3*sizeof(unsigned)), &total_up_clks, sizeof(unsigned));
+        e_read(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float) + (4*sizeof(unsigned)), &masternode_clks, sizeof(unsigned));
 
         if (t - last_t) {
-            avg_inf_clks = (int)(total_inf_clks * ONE_OVER_N);
-            avg_up_clks = (int)(total_up_clks * ONE_OVER_N);
+            avg_inf_clks = (unsigned)(total_inf_clks * ONE_OVER_N);
+            avg_up_clks = (unsigned)(total_up_clks * ONE_OVER_N);
             last_t = t;
-            secs += masternode_clks / E_CYCLES;
+            secs += masternode_clks * ONE_OVER_E_CYCLES;
 
             printf("\nConfiguration: Master Node\n");
             printf("-------------------------------\n");
@@ -168,7 +171,7 @@ int main(int argc, char *argv[]) {
 
 #else
     // Allocate shared memory
-    if (e_alloc(&mbuf, SHM_OFFSET, N*N*sizeof(int)) != E_OK) {
+    if (e_alloc(&mbuf, SHM_OFFSET, N*N*sizeof(unsigned)) != E_OK) {
         printf("Error: Failed to allocate shared memory\n");
         return EXIT_FAILURE;
     };
@@ -179,9 +182,6 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    int done[N], j;
-    float xt[IN_ROWS];
-
     printf("Network started...\n\n");
 
     clock_t start = clock(), diff;
@@ -191,7 +191,7 @@ int main(int argc, char *argv[]) {
 
         for (j = 0; j < N; ++j) {
             e_write(&dev, 0, j, XT_MEM_ADDR, &xt, IN_ROWS*sizeof(float));   // "Stream" next data sample
-            e_write(&mbuf, 0, 0, j*sizeof(int), &clr, sizeof(int));  // Clear done flag
+            e_write(&mbuf, 0, 0, j*sizeof(unsigned), &clr, sizeof(unsigned));  // Clear done flag
         }
 
         // Start/wake workgroup
@@ -214,14 +214,14 @@ int main(int argc, char *argv[]) {
         total_up_clks = 0;
 
         for (j = 0; j < N; ++j) {
-            e_read(&mbuf, 0, 0, j*sizeof(int) + (3*sizeof(int)), &inf_clks, sizeof(int));
+            e_read(&mbuf, 0, 0, j*sizeof(unsigned) + (M*N*sizeof(unsigned)), &inf_clks, sizeof(unsigned));
             total_inf_clks += inf_clks;
-            e_read(&mbuf, 0, 0, j*sizeof(int) + (6*sizeof(int)), &up_clks, sizeof(int));
+            e_read(&mbuf, 0, 0, j*sizeof(unsigned) + (2*N*sizeof(unsigned)), &up_clks, sizeof(unsigned));
             total_up_clks += up_clks;
         }
 
-        avg_inf_clks = (int)(total_inf_clks * ONE_OVER_N);
-        avg_up_clks = (int)(total_up_clks * ONE_OVER_N);
+        avg_inf_clks = (unsigned)(total_inf_clks * ONE_OVER_N);
+        avg_up_clks = (unsigned)(total_up_clks * ONE_OVER_N);
 
         diff = clock() - start;
         secs = diff / CLOCKS_PER_SEC;

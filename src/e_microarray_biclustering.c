@@ -10,46 +10,39 @@ float sign(float value);
 void sync_isr(int x);
 
 int main(void) {
-	unsigned *xt, *wk, *update_wk, *nu_opt, *nu_k, *done_flag, *inf_clks, *up_clks, *dest, *p;
-	unsigned volatile *nu_k0, *nu_k1, *nu_k2;
-	unsigned slave_core, j, nu_src_addr, done_flag_addr, inf_clks_addr, up_clks_addr, out_mem_offset, timer_value_0, timer_value_1;
-	float subgrad[WK_ROWS], scaling, rms_wk, rms_wk_reciprocol;
-	int i, reps;
+	unsigned *done_flag, *inf_clks, *up_clks, *p, i, j, reps, slave_core_addr, nu_src_addr, out_mem_offset, timer_value_0, timer_value_1;
+	float *xt, *wk, *update_wk, *nu_opt, *nu_k, *nu_k0, *nu_k1, *nu_k2, *dest, subgrad[WK_ROWS], scaling, rms_wk, rms_wk_reciprocol;
 
-	xt = (unsigned *)XT_MEM_ADDR;	            // Address of xt (56 x 1)
-	wk = (unsigned *)WK_MEM_ADDR;	            // Address of dictionary atom (56 x 1)
-	update_wk = (unsigned *)UP_WK_MEM_ADDR;	// Address of update atom (56 x 1)
-	nu_opt = (unsigned *)NU_OPT_MEM_ADDR;      // Address of optimal dual variable (56 x 1)
-	nu_k0 = (unsigned *)NU_K0_MEM_ADDR;	    // Address of node 0 dual variable estimate (56 x 1)
-	nu_k1 = (unsigned *)NU_K1_MEM_ADDR;        // Address of node 1 dual variable estimate (56 x 1)
-	nu_k2 = (unsigned *)NU_K2_MEM_ADDR;        // Address of node 2 dual variable estimate (56 x 1)
+	xt = (float *)XT_MEM_ADDR;	            // Address of xt (56 x 1)
+	wk = (float *)WK_MEM_ADDR;	            // Address of dictionary atom (56 x 1)
+	update_wk = (float *)UP_WK_MEM_ADDR;	// Address of update atom (56 x 1)
+	nu_opt = (float *)NU_OPT_MEM_ADDR;      // Address of optimal dual variable (56 x 1)
+	nu_k0 = (float *)NU_K0_MEM_ADDR;	    // Address of node 0 dual variable estimate (56 x 1)
+	nu_k1 = (float *)NU_K1_MEM_ADDR;        // Address of node 1 dual variable estimate (56 x 1)
+	nu_k2 = (float *)NU_K2_MEM_ADDR;        // Address of node 2 dual variable estimate (56 x 1)
 
     p = CLEAR_FLAG;
-    out_mem_offset = (unsigned)(e_group_config.core_col*sizeof(int));
+    out_mem_offset = (unsigned)(e_group_config.core_col*sizeof(unsigned));
 
 #ifdef USE_MASTER_NODE
     unsigned master_node_addr = (unsigned)e_get_global_address_on_chip(MASTER_NODE_ROW, MASTER_NODE_COL, p);
-	inf_clks_addr = master_node_addr + (unsigned)INF_CLKS_MEM_ADDR + out_mem_offset;
-	up_clks_addr = master_node_addr + (unsigned)UP_CLKS_MEM_ADDR + out_mem_offset;
-	done_flag_addr = master_node_addr + (unsigned)DONE_MEM_ADDR + out_mem_offset;
-	unsigned ready_flag_addr = master_node_addr + (unsigned)READY_MEM_ADDR + out_mem_offset;
-	unsigned *ready_flag = (unsigned *)ready_flag_addr;
+	unsigned *ready_flag = (unsigned *)(master_node_addr + READY_MEM_ADDR + out_mem_offset);
+	inf_clks = (unsigned *)(master_node_addr + INF_CLKS_MEM_ADDR + out_mem_offset);
+    up_clks = (unsigned *)(master_node_addr + UP_CLKS_MEM_ADDR + out_mem_offset);
+    done_flag = (unsigned *)(master_node_addr + DONE_MEM_ADDR + out_mem_offset);	 // "Done" flag (1 x 1)
 #else
-    done_flag_addr = (unsigned)SHMEM_ADDR + out_mem_offset;
-    inf_clks_addr = (unsigned)SHMEM_ADDR + (3*sizeof(int)) + out_mem_offset;
-	up_clks_addr = (unsigned)SHMEM_ADDR + (6*sizeof(int)) + out_mem_offset;
+	done_flag = (unsigned *)(SHMEM_ADDR + out_mem_offset);
+    inf_clks = (unsigned *)(SHMEM_ADDR + (M*N*sizeof(unsigned)) + out_mem_offset);
+    up_clks = (unsigned *)(SHMEM_ADDR + (2*M*N*sizeof(unsigned)) + out_mem_offset);	 // "Done" flag (1 x 1)
 #endif
 
-    inf_clks = (unsigned *)inf_clks_addr;
-    up_clks = (unsigned *)up_clks_addr;
-    done_flag = (unsigned *)done_flag_addr;	 // "Done" flag (1 x 1)
-    nu_src_addr = (unsigned)NU_K0_MEM_ADDR;
+    nu_src_addr = NU_K0_MEM_ADDR;
 
     for (i = 0; i < e_group_config.core_col; ++i) {
-        nu_src_addr = nu_src_addr + (unsigned)NU_MEM_OFFSET;
+        nu_src_addr = nu_src_addr + NU_MEM_OFFSET;
     }
 
-    nu_k = (unsigned *)nu_src_addr;    // Address of this cores dual variable estimate
+    nu_k = (float *)nu_src_addr;    // Address of this cores dual variable estimate
 
     // Re-enable interrupts
     e_irq_attach(E_SYNC, sync_isr);
@@ -94,8 +87,8 @@ int main(void) {
 	        // Exchange dual variable estimates along row
             for (j = 0; j < e_group_config.group_cols; ++j) {
                 if (j != e_group_config.core_col) {
-                    slave_core = (unsigned)e_get_global_address(e_group_config.core_row, j, p);
-                    dest = (unsigned *)(slave_core + (unsigned)nu_src_addr);
+                    slave_core_addr = (unsigned)e_get_global_address(e_group_config.core_row, j, p);
+                    dest = (float *)(slave_core_addr + nu_src_addr);
                     e_memcopy(dest, nu_k, WK_ROWS*sizeof(float));
                 }
             }
@@ -212,6 +205,6 @@ inline float sign(float value) {
 *
 */
 
-void __attribute__((interrupt)) sync_isr(int x) {
+inline void __attribute__((interrupt)) sync_isr(int x) {
     return;
 }
