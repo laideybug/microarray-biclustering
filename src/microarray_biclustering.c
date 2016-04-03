@@ -17,8 +17,8 @@ int main(int argc, char *argv[]) {
     int last_t;
 #else
     unsigned inf_clks, up_clks;
-    float xt[IN_ROWS];
-    int done[N], j;
+    float xt[IN_ROWS], xt_k[WK_ROWS];
+    int done[M*N], j, k;
 #endif
 
     clr = CLEAR_FLAG;
@@ -171,7 +171,7 @@ int main(int argc, char *argv[]) {
 
 #else
     // Allocate shared memory
-    if (e_alloc(&mbuf, SHM_OFFSET, N*N*sizeof(unsigned)) != E_OK) {
+    if (e_alloc(&mbuf, SHM_OFFSET, 3*M*N*sizeof(unsigned)) != E_OK) {
         printf("Error: Failed to allocate shared memory\n");
         return EXIT_FAILURE;
     };
@@ -189,9 +189,17 @@ int main(int argc, char *argv[]) {
     for (t = 0; t < IN_COLS; ++t) {
         getColumn(IN_ROWS, IN_COLS, t, input_data, xt);
 
-        for (j = 0; j < N; ++j) {
-            e_write(&dev, 0, j, XT_MEM_ADDR, &xt, IN_ROWS*sizeof(float));   // "Stream" next data sample
-            e_write(&mbuf, 0, 0, j*sizeof(unsigned), &clr, sizeof(unsigned));  // Clear done flag
+        for (j = 0; j < M; ++j) {
+            for (i = 0; i < WK_ROWS; ++i) {
+                xt_k[i] = *(xt + (i + j*WK_ROWS));
+            }
+
+            for (k = 0; k < N; ++k) {
+                // "Stream" next data sample
+                e_write(&dev, j, k, XT_MEM_ADDR, &xt_k, WK_ROWS*sizeof(float));
+                // Clear done flag
+                e_write(&mbuf, 0, 0, (j * N + k)*sizeof(unsigned), &clr, sizeof(unsigned));
+            }
         }
 
         // Start/wake workgroup
@@ -200,28 +208,30 @@ int main(int argc, char *argv[]) {
         while (1) {
             all_done = 0;
 
-            for (j = 0; j < N; ++j) {
+            for (j = 0; j < M*N; ++j) {
                 e_read(&mbuf, 0, 0, j*sizeof(int), &done[j], sizeof(int));
                 all_done += done[j];
             }
 
-            if (all_done == N) {
+            if (all_done == M*N) {
                 break;
             }
         }
 
+        printf("\nAll_Done...\n");
+
         total_inf_clks = 0;
         total_up_clks = 0;
 
-        for (j = 0; j < N; ++j) {
+        for (j = 0; j < M*N; ++j) {
             e_read(&mbuf, 0, 0, j*sizeof(unsigned) + (M*N*sizeof(unsigned)), &inf_clks, sizeof(unsigned));
             total_inf_clks += inf_clks;
-            e_read(&mbuf, 0, 0, j*sizeof(unsigned) + (2*N*sizeof(unsigned)), &up_clks, sizeof(unsigned));
+            e_read(&mbuf, 0, 0, j*sizeof(unsigned) + (2*M*N*sizeof(unsigned)), &up_clks, sizeof(unsigned));
             total_up_clks += up_clks;
         }
 
-        avg_inf_clks = (unsigned)(total_inf_clks * ONE_OVER_N);
-        avg_up_clks = (unsigned)(total_up_clks * ONE_OVER_N);
+        avg_inf_clks = (unsigned)(total_inf_clks * ONE_OVER_M_N);
+        avg_up_clks = (unsigned)(total_up_clks * ONE_OVER_M_N);
 
         diff = clock() - start;
         secs = diff / CLOCKS_PER_SEC;
