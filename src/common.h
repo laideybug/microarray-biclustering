@@ -33,6 +33,7 @@
 #define M 				    1
 #define N 				    3
 #define ONE_OVER_N 		    0.333333333
+#define ONE_OVER_M_N 		0.333333333
 #define PI 				    3.141592654
 #define MU_W 			    0.005
 #define GAMMA 			    0.5

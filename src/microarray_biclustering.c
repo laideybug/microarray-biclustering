@@ -18,7 +18,7 @@ int main(int argc, char *argv[]) {
 #else
     unsigned inf_clks, up_clks;
     float xt[IN_ROWS];
-    int done[N], j;
+    int done[M*N], j;
 #endif
 
     clr = CLEAR_FLAG;
@@ -216,12 +216,12 @@ int main(int argc, char *argv[]) {
         for (j = 0; j < N; ++j) {
             e_read(&mbuf, 0, 0, j*sizeof(unsigned) + (M*N*sizeof(unsigned)), &inf_clks, sizeof(unsigned));
             total_inf_clks += inf_clks;
-            e_read(&mbuf, 0, 0, j*sizeof(unsigned) + (2*N*sizeof(unsigned)), &up_clks, sizeof(unsigned));
+            e_read(&mbuf, 0, 0, j*sizeof(unsigned) + (2*M*N*sizeof(unsigned)), &up_clks, sizeof(unsigned));
             total_up_clks += up_clks;
         }
 
-        avg_inf_clks = (unsigned)(total_inf_clks * ONE_OVER_N);
-        avg_up_clks = (unsigned)(total_up_clks * ONE_OVER_N);
+        avg_inf_clks = (unsigned)(total_inf_clks * ONE_OVER_M_N);
+        avg_up_clks = (unsigned)(total_up_clks * ONE_OVER_M_N);
 
         diff = clock() - start;
         secs = diff / CLOCKS_PER_SEC;

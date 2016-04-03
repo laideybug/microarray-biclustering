@@ -10,7 +10,7 @@ float sign(float value);
 void sync_isr(int x);
 
 int main(void) {
-	unsigned *done_flag, *inf_clks, *up_clks, *p, i, j, reps, slave_core_addr, nu_src_addr, out_mem_offset, timer_value_0, timer_value_1;
+	unsigned *done_flag, *inf_clks, *up_clks, *p, i, j, reps, slave_core_addr, out_mem_offset, timer_value_0, timer_value_1;
 	float *xt, *wk, *update_wk, *nu_opt, *nu_k, *nu_k0, *nu_k1, *nu_k2, *dest, subgrad[WK_ROWS], scaling, rms_wk, rms_wk_reciprocol;
 
 	xt = (float *)XT_MEM_ADDR;	            // Address of xt (56 x 1)
@@ -36,14 +36,8 @@ int main(void) {
     up_clks = (unsigned *)(SHMEM_ADDR + (2*M*N*sizeof(unsigned)) + out_mem_offset);	 // "Done" flag (1 x 1)
 #endif
 
-    nu_src_addr = NU_K0_MEM_ADDR;
-
-    for (i = 0; i < e_group_config.core_col; ++i) {
-        nu_src_addr = nu_src_addr + NU_MEM_OFFSET;
-    }
-
-    nu_k = (float *)nu_src_addr;    // Address of this cores dual variable estimate
-
+    // Address of this cores dual variable estimate
+    nu_k = (float *)(NU_K0_MEM_ADDR + (e_group_config.core_col * NU_MEM_OFFSET));
     // Re-enable interrupts
     e_irq_attach(E_SYNC, sync_isr);
     e_irq_mask(E_SYNC, E_FALSE);
@@ -72,7 +66,7 @@ int main(void) {
 			for (i = 0; i < WK_ROWS; ++i) {
 				/* subgrad = (nu-xt)*minus_mu_over_N */
 				subgrad[i] = nu_opt[i] - xt[i];
-				subgrad[i] = subgrad[i] * (-MU_2 * ONE_OVER_N);
+				subgrad[i] = subgrad[i] * -MU_2 * ONE_OVER_N;
 				/* scaling = (my_W_transpose*nu) */
 				scaling = scaling + wk[i] * nu_opt[i];
 			}
@@ -81,14 +75,14 @@ int main(void) {
 
 			for (i = 0; i < WK_ROWS; ++i) {
 				/* D * diagmat(scaling*my_minus_mu) */
-				nu_k[i] = wk[i] * (scaling * -MU_2);
+				nu_k[i] = wk[i] * scaling * -MU_2;
 			}
 
 	        // Exchange dual variable estimates along row
             for (j = 0; j < e_group_config.group_cols; ++j) {
                 if (j != e_group_config.core_col) {
                     slave_core_addr = (unsigned)e_get_global_address(e_group_config.core_row, j, p);
-                    dest = (float *)(slave_core_addr + nu_src_addr);
+                    dest = (float *)(slave_core_addr + nu_k);
                     e_memcopy(dest, nu_k, WK_ROWS*sizeof(float));
                 }
             }
@@ -120,7 +114,7 @@ int main(void) {
 
 		// Create update atom (Y_opt)
 		for (i = 0; i < WK_ROWS; ++i) {
-			update_wk[i] =  MU_W * (nu_opt[i] * scaling);
+			update_wk[i] =  MU_W * nu_opt[i] * scaling;
 			wk[i] = wk[i] + update_wk[i];
 			wk[i] = fmax(abs(wk[i])-BETA*MU_W, 0.0f) * sign(wk[i]);
 	        rms_wk = rms_wk + wk[i] * wk[i];
