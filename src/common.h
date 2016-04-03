@@ -29,10 +29,11 @@
 #define ONE_OVER_IN_ROWS    0.017857143
 #define IN_COLS			    12625
 #define ONE_OVER_IN_COLS    7.920792079e-5
-#define WK_ROWS			    56
-#define M 				    1
+#define WK_ROWS			    14
+#define M 				    4
 #define N 				    3
 #define ONE_OVER_N 		    0.333333333
+#define ONE_OVER_M_N 		0.083333333
 #define PI 				    3.141592654
 #define MU_W 			    0.005
 #define GAMMA 			    0.5
@@ -63,6 +64,8 @@
 #define NU_K0_MEM_ADDR      0x4920
 #define NU_K1_MEM_ADDR      0x5150
 #define NU_K2_MEM_ADDR      0x5380
+#define INC_SCAL_MEM_ADDR   0x5800
+#define INC_RMS_MEM_ADDR    0x5850
 #define NU_MEM_OFFSET       0x0230
 
 // Master node macros and addresses
