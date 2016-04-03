@@ -36,8 +36,8 @@ int main(void) {
 	unsigned *ready_flag = (unsigned *)ready_flag_addr;
 #else
     done_flag_addr = (unsigned)SHMEM_ADDR + out_mem_offset;
-    inf_clks_addr = (unsigned)SHMEM_ADDR + + (3*sizeof(int)) + out_mem_offset;
-	up_clks_addr = (unsigned)SHMEM_ADDR + + (6*sizeof(int)) + out_mem_offset;
+    inf_clks_addr = (unsigned)SHMEM_ADDR + (3*sizeof(int)) + out_mem_offset;
+	up_clks_addr = (unsigned)SHMEM_ADDR + (6*sizeof(int)) + out_mem_offset;
 #endif
 
     inf_clks = (unsigned *)inf_clks_addr;

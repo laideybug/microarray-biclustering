@@ -187,7 +187,7 @@ int main(int argc, char *argv[]) {
     clock_t start = clock(), diff;
 
     for (t = 0; t < IN_COLS; ++t) {
-        getColumn(IN_ROWS, IN_COLS, i, input_data, xt);
+        getColumn(IN_ROWS, IN_COLS, t, input_data, xt);
 
         for (j = 0; j < N; ++j) {
             e_write(&dev, 0, j, XT_MEM_ADDR, &xt, IN_ROWS*sizeof(float));   // "Stream" next data sample
