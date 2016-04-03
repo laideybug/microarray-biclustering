@@ -4,7 +4,7 @@
 
 int main(void) {
 	unsigned *all_done_flag, *total_inf_clks, *total_up_clks, *slave_ready_flag, *slave_done_flag, *slave_inf_clks, *slave_up_clks, *masternode_clks, *p, slave_core_addr, i, j, k, all_ready, all_done, inf_clks, up_clks;
-	float *xt, *dest;
+	float *xt, *dest, xt_k[WK_ROWS];
 	int *sample_no;
 
 	all_done_flag = (unsigned *)(SHMEM_ADDR + IN_ROWS*IN_COLS*sizeof(float));
@@ -25,12 +25,12 @@ int main(void) {
     while (1) {
         all_ready = 0;
 
-        for (i = 0; i < N; ++i) {
+        for (i = 0; i < M*N; ++i) {
             slave_ready_flag = (unsigned *)(READY_MEM_ADDR + i*sizeof(unsigned));
             all_ready += *slave_ready_flag;
         }
 
-        if (all_ready == N) {
+        if (all_ready == M*N) {
             break;
         }
     }
@@ -42,10 +42,14 @@ int main(void) {
 		xt = (float *)(SHMEM_ADDR + i*IN_ROWS*sizeof(float));
 
         for (j = 0; j < M; ++j) {
+            for (k = 0; k < WK_ROWS; ++k) {
+                xt_k[k] = *(xt + (k + j*WK_ROWS));
+            }
+
             for (k = 0; k < N; ++k) {
                 slave_core_addr = (unsigned)e_get_global_address_on_chip(j, k, p);
                 dest = (float *)(slave_core_addr + XT_MEM_ADDR);
-                e_memcopy(dest, xt, IN_ROWS*sizeof(float));
+                e_memcopy(dest, xt_k, WK_ROWS*sizeof(float));
                 e_global_address_irq_set(j, k, E_SYNC);
             }
         }
@@ -53,12 +57,12 @@ int main(void) {
 		while (1) {
             all_done = 0;
 
-            for (j = 0; j < N; ++j) {
+            for (j = 0; j < M*N; ++j) {
                 slave_done_flag = (unsigned *)(DONE_MEM_ADDR + j*sizeof(unsigned));
                 all_done += *slave_done_flag;
             }
 
-            if (all_done == N) {
+            if (all_done == M*N) {
                 break;
             }
         }
@@ -66,7 +70,7 @@ int main(void) {
         inf_clks = 0;
         up_clks = 0;
 
-        for (j = 0; j < N; ++j) {
+        for (j = 0; j < M*N; ++j) {
             slave_inf_clks = (unsigned *)(INF_CLKS_MEM_ADDR + j*sizeof(unsigned));
             inf_clks += *slave_inf_clks;
             *slave_inf_clks = 0;

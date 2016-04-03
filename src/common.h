@@ -71,7 +71,7 @@
 // Master node macros and addresses
 #define MASTER_NODE_ROW     0
 #define MASTER_NODE_COL     3
-#define MASTER_ADDR_NUM     5
+#define MASTER_ADDR_NUM     5		// The number of items returned by the master node
 #define INF_CLKS_MEM_ADDR   0x4000
 #define UP_CLKS_MEM_ADDR    0x4200
 #define READY_MEM_ADDR      0x4400

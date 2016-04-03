@@ -141,8 +141,8 @@ int main(int argc, char *argv[]) {
         e_read(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float) + (4*sizeof(unsigned)), &masternode_clks, sizeof(unsigned));
 
         if (t - last_t) {
-            avg_inf_clks = (unsigned)(total_inf_clks * ONE_OVER_N);
-            avg_up_clks = (unsigned)(total_up_clks * ONE_OVER_N);
+            avg_inf_clks = (unsigned)(total_inf_clks * ONE_OVER_M_N);
+            avg_up_clks = (unsigned)(total_up_clks * ONE_OVER_M_N);
             last_t = t;
             secs += masternode_clks * ONE_OVER_E_CYCLES;
 
@@ -190,8 +190,8 @@ int main(int argc, char *argv[]) {
         getColumn(IN_ROWS, IN_COLS, t, input_data, xt);
 
         for (j = 0; j < M; ++j) {
-            for (i = 0; i < WK_ROWS; ++i) {
-                xt_k[i] = *(xt + (i + j*WK_ROWS));
+            for (k = 0; k < WK_ROWS; ++k) {
+                xt_k[k] = *(xt + (k + j*WK_ROWS));
             }
 
             for (k = 0; k < N; ++k) {
@@ -217,8 +217,6 @@ int main(int argc, char *argv[]) {
                 break;
             }
         }
-
-        printf("\nAll_Done...\n");
 
         total_inf_clks = 0;
         total_up_clks = 0;
