@@ -171,7 +171,7 @@ int main(int argc, char *argv[]) {
 
 #else
     // Allocate shared memory
-    if (e_alloc(&mbuf, SHM_OFFSET, N*N*sizeof(unsigned)) != E_OK) {
+    if (e_alloc(&mbuf, SHM_OFFSET, 3*M*N*sizeof(unsigned)) != E_OK) {
         printf("Error: Failed to allocate shared memory\n");
         return EXIT_FAILURE;
     };
