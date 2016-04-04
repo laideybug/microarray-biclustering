@@ -6,7 +6,7 @@
 
 // Configuration macros
 #define USE_MASTER_NODE
-#define USE_DMA
+//#define USE_DMA
 
 #ifdef USE_MASTER_NODE
 #define MASTER_NODE         1

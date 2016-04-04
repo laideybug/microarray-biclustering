@@ -9,7 +9,7 @@
 
 int main(int argc, char *argv[]) {
     unsigned current_row, current_col, i, all_done, avg_inf_clks, avg_up_clks, total_inf_clks, total_up_clks, clr;
-    float input_data[IN_ROWS][IN_COLS], data_point, dictionary_w[IN_ROWS][N], update_wk[IN_ROWS], dual_var[IN_ROWS], secs;
+    float input_data[IN_ROWS][IN_COLS], data_point, dictionary_w[IN_ROWS][N], update_wk[IN_ROWS], dual_var[IN_ROWS], secs, t_plus_one_reciprocol;
     int t;
     char path[100] = "../data/data.txt";
 #ifdef USE_MASTER_NODE
@@ -145,6 +145,7 @@ int main(int argc, char *argv[]) {
             avg_up_clks = (unsigned)(total_up_clks * ONE_OVER_M_N);
             last_t = t;
             secs += masternode_clks * ONE_OVER_E_CYCLES;
+            t_plus_one_reciprocol = 1.0f/(t+1);
 
             printf("\nConfiguration: Master Node\n");
             printf("-------------------------------\n");
@@ -153,12 +154,13 @@ int main(int argc, char *argv[]) {
             printf("Average network speed of inference step: %.6f seconds\n", avg_inf_clks * ONE_OVER_E_CYCLES);
             printf("Average clock cycles for update step: %i clock cycles\n", avg_up_clks);
             printf("Average network speed of update step: %.6f seconds\n", avg_up_clks * ONE_OVER_E_CYCLES);
+            printf("Master node clock cycles: %i clock cycles\n", masternode_clks);
             printf("-------------------------------\n");
             printf("Percent complete: %.2f%%\n", (t+1)*100.0f*ONE_OVER_IN_COLS);
-            printf("Average speed: %.2f seconds/sample\n", secs/(t+1));
+            printf("Average speed: %.6f seconds/sample\n", secs*t_plus_one_reciprocol);
             printf("Time elapsed: %.2f seconds\n", secs);
-            printf("Total time estimate: %.2f seconds\n", (secs/(t+1))*IN_COLS);
-            printf("Remaining time estimate: %.2f seconds\n\n", (secs/(t+1))*IN_COLS - secs);
+            printf("Total time estimate: %.2f seconds\n", secs*t_plus_one_reciprocol*IN_COLS);
+            printf("Remaining time estimate: %.2f seconds\n\n", secs*t_plus_one_reciprocol*IN_COLS - secs);
         }
 
         if (all_done == 1) {
@@ -233,6 +235,7 @@ int main(int argc, char *argv[]) {
 
         diff = clock() - start;
         secs = diff / CLOCKS_PER_SEC;
+        t_plus_one_reciprocol = 1.0f/(t+1);
 
         printf("\nConfiguration: ARM\n");
         printf("-------------------------------\n");
@@ -243,10 +246,10 @@ int main(int argc, char *argv[]) {
         printf("Average network speed of update step: %.6f seconds\n", avg_up_clks * ONE_OVER_E_CYCLES);
         printf("-------------------------------\n");
         printf("Percent complete: %.2f%%\n", (t+1)*100.0f*ONE_OVER_IN_COLS);
-        printf("Average speed: %.2f seconds/sample\n", secs/(t+1));
+        printf("Average speed: %.6f seconds/sample\n", secs*t_plus_one_reciprocol);
         printf("Time elapsed: %.2f seconds\n", secs);
-        printf("Total time: %.2f seconds\n", (secs/(t+1))*IN_COLS);
-        printf("Remaining time: %.2f seconds\n\n", (secs/(t+1))*IN_COLS - secs);
+        printf("Total time: %.2f seconds\n", secs*t_plus_one_reciprocol*IN_COLS);
+        printf("Remaining time: %.2f seconds\n\n", secs*t_plus_one_reciprocol*IN_COLS - secs);
     }
 
     printf("Done.");
