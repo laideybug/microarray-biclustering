@@ -13,7 +13,7 @@ int main(int argc, char *argv[]) {
     int t;
     char path[100] = "../data/data.txt";
 #ifdef USE_MASTER_NODE
-    unsigned masternode_clks;
+    unsigned masternode_clks, section_clks;
     int last_t;
 #else
     unsigned inf_clks, up_clks;
@@ -108,7 +108,7 @@ int main(int argc, char *argv[]) {
     e_reset_group(&dev_master);
 
     // Allocate shared memory
-    if (e_alloc(&mbuf, SHM_OFFSET, IN_ROWS*IN_COLS*sizeof(float) + MASTER_ADDR_NUM*sizeof(int)) != E_OK) {
+    if (e_alloc(&mbuf, SHM_OFFSET, IN_ROWS*IN_COLS*sizeof(float) + MASTER_ADDR_NUM*sizeof(unsigned)) != E_OK) {
         printf("Error: Failed to allocate shared memory\n");
         return EXIT_FAILURE;
     };
@@ -139,10 +139,13 @@ int main(int argc, char *argv[]) {
         e_read(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float) + (2*sizeof(unsigned)), &total_inf_clks, sizeof(unsigned));
         e_read(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float) + (3*sizeof(unsigned)), &total_up_clks, sizeof(unsigned));
         e_read(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float) + (4*sizeof(unsigned)), &masternode_clks, sizeof(unsigned));
+        e_read(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float) + (5*sizeof(unsigned)), &section_clks, sizeof(unsigned));
 
         if (t - last_t) {
-            avg_inf_clks = (unsigned)(total_inf_clks * ONE_OVER_M_N);
-            avg_up_clks = (unsigned)(total_up_clks * ONE_OVER_M_N);
+            //avg_inf_clks = (unsigned)(total_inf_clks * ONE_OVER_M_N);
+            //avg_up_clks = (unsigned)(total_up_clks * ONE_OVER_M_N);
+            avg_inf_clks = (unsigned)(total_inf_clks);
+            avg_up_clks = (unsigned)(total_up_clks);
             last_t = t;
             secs += masternode_clks * ONE_OVER_E_CYCLES;
             t_plus_one_reciprocol = 1.0f/(t+1);
@@ -155,6 +158,7 @@ int main(int argc, char *argv[]) {
             printf("Average clock cycles for update step: %i clock cycles\n", avg_up_clks);
             printf("Average network speed of update step: %.6f seconds\n", avg_up_clks * ONE_OVER_E_CYCLES);
             printf("Master node clock cycles: %i clock cycles\n", masternode_clks);
+            printf("Section clock cycles: %i clock cycles\n", section_clks);
             printf("-------------------------------\n");
             printf("Percent complete: %.2f%%\n", (t+1)*100.0f*ONE_OVER_IN_COLS);
             printf("Average speed: %.6f seconds/sample\n", secs*t_plus_one_reciprocol);

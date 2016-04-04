@@ -12,28 +12,34 @@ void sync_isr(int x);
 int main(void) {
 	unsigned  *done_flag, *inf_clks, *up_clks, *p, i, j, reps, slave_core_addr, out_mem_offset, timer_value_0, timer_value_1;
 	float *xt, *wk, *update_wk, *nu_opt, *nu_k, *nu_k0, *nu_k1, *nu_k2, *dest, *scaling_incomplete, *scaling_incomplete_k, *rms_wk_incomplete, *rms_wk_incomplete_k, subgrad[WK_ROWS], scaling, rms_wk, rms_wk_reciprocol;
+#ifdef USE_MASTER_NODE
+    unsigned *ready_flag, master_node_addr, done_flag_counter;
+    e_mutex_t *mutex;
+#endif
 
-	xt = (float *)XT_MEM_ADDR;	            // Address of xt (14 x 1)
-	wk = (float *)WK_MEM_ADDR;	            // Address of dictionary atom (14 x 1)
-	update_wk = (float *)UP_WK_MEM_ADDR;	// Address of update atom (14 x 1)
-	nu_opt = (float *)NU_OPT_MEM_ADDR;      // Address of optimal dual variable (14 x 1)
-	nu_k0 = (float *)NU_K0_MEM_ADDR;	    // Address of node 0 dual variable estimate (14 x 1)
-	nu_k1 = (float *)NU_K1_MEM_ADDR;        // Address of node 1 dual variable estimate (14 x 1)
-	nu_k2 = (float *)NU_K2_MEM_ADDR;        // Address of node 2 dual variable estimate (14 x 1)
+	xt = (float *)XT_MEM_ADDR;	            // Address of xt (WK_ROWS x 1)
+	wk = (float *)WK_MEM_ADDR;	            // Address of dictionary atom (WK_ROWS x 1)
+	update_wk = (float *)UP_WK_MEM_ADDR;	// Address of update atom (WK_ROWS x 1)
+	nu_opt = (float *)NU_OPT_MEM_ADDR;      // Address of optimal dual variable (WK_ROWS x 1)
+	nu_k0 = (float *)NU_K0_MEM_ADDR;	    // Address of node 0 dual variable estimate (WK_ROWS x 1)
+	nu_k1 = (float *)NU_K1_MEM_ADDR;        // Address of node 1 dual variable estimate (WK_ROWS x 1)
+	nu_k2 = (float *)NU_K2_MEM_ADDR;        // Address of node 2 dual variable estimate (WK_ROWS x 1)
 
     p = CLEAR_FLAG;
     out_mem_offset = (unsigned)((e_group_config.core_row * e_group_config.group_cols + e_group_config.core_col)*sizeof(unsigned));
 
 #ifdef USE_MASTER_NODE
-    unsigned master_node_addr = (unsigned)e_get_global_address_on_chip(MASTER_NODE_ROW, MASTER_NODE_COL, p);
-	unsigned *ready_flag = (unsigned *)(master_node_addr + READY_MEM_ADDR + out_mem_offset);
+    master_node_addr = (unsigned)e_get_global_address_on_chip(MASTER_NODE_ROW, MASTER_NODE_COL, p);
+	ready_flag = (unsigned *)(master_node_addr + READY_MEM_ADDR + out_mem_offset);
 	inf_clks = (unsigned *)(master_node_addr + INF_CLKS_MEM_ADDR + out_mem_offset);
     up_clks = (unsigned *)(master_node_addr + UP_CLKS_MEM_ADDR + out_mem_offset);
-    done_flag = (unsigned *)(master_node_addr + DONE_MEM_ADDR + out_mem_offset);	 // "Done" flag (1 x 1)
+    done_flag = (unsigned *)(master_node_addr + DONE_MEM_ADDR);
+
+    mutex = (int *)DONE_MUTEX_MEM_ADDR;
 #else
 	done_flag = (unsigned *)(SHMEM_ADDR + out_mem_offset);
     inf_clks = (unsigned *)(SHMEM_ADDR + (M*N*sizeof(unsigned)) + out_mem_offset);
-    up_clks = (unsigned *)(SHMEM_ADDR + (2*M*N*sizeof(unsigned)) + out_mem_offset);	 // "Done" flag (1 x 1)
+    up_clks = (unsigned *)(SHMEM_ADDR + (2*M*N*sizeof(unsigned)) + out_mem_offset);
 #endif
 
     // Address of this cores dual variable estimate
@@ -192,15 +198,31 @@ int main(void) {
 			}
 		}
 
-		timer_value_1 = E_CTIMER_MAX - e_ctimer_stop(E_CTIMER_0);
+		//timer_value_1 = E_CTIMER_MAX - e_ctimer_stop(E_CTIMER_0);
 
-		// Write benchmark values
+#ifdef USE_MASTER_NODE
+        // Aqcuire the mutex lock
+		e_global_mutex_lock(MASTER_NODE_ROW, MASTER_NODE_COL, mutex);
+
+        timer_value_1 = E_CTIMER_MAX - e_ctimer_stop(E_CTIMER_0);
+        // Write benchmark values
 		(*(inf_clks)) = timer_value_0;
 		(*(up_clks)) = timer_value_1;
-		// Raising "done" flag for master node
-	   	(*(done_flag)) = SET_FLAG;
+		// Increment "done" flag for master node
+		done_flag_counter = (*(done_flag));
+		done_flag_counter = done_flag_counter + 1;
+	   	(*(done_flag)) = done_flag_counter;
 
-#ifndef USE_MASTER_NODE
+	   	// Release the mutex lock
+	   	e_global_mutex_unlock(MASTER_NODE_ROW, MASTER_NODE_COL, mutex);
+
+        // The last node to update sends an interrupt to master node
+	   	if (done_flag_counter == M_N) {
+            e_global_address_irq_set(MASTER_NODE_ROW, MASTER_NODE_COL, E_SYNC);
+	   	}
+#else
+        // Raising "done" flag
+        (*(done_flag)) = SET_FLAG;
         // Put core in idle state
         __asm__ __volatile__("idle");
 #endif

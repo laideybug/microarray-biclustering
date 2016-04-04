@@ -32,6 +32,7 @@
 #define WK_ROWS			    14
 #define M 				    4
 #define N 				    3
+#define M_N 				12
 #define ONE_OVER_N 		    0.333333333
 #define ONE_OVER_M_N 		0.083333333
 #define PI 				    3.141592654
@@ -71,10 +72,11 @@
 // Master node macros and addresses
 #define MASTER_NODE_ROW     0
 #define MASTER_NODE_COL     3
-#define MASTER_ADDR_NUM     5		// The number of items returned by the master node
+#define MASTER_ADDR_NUM     6		// The number of benchmark values returned by the master node
 #define INF_CLKS_MEM_ADDR   0x4000
 #define UP_CLKS_MEM_ADDR    0x4200
 #define READY_MEM_ADDR      0x4400
 #define DONE_MEM_ADDR       0x4600
+#define DONE_MUTEX_MEM_ADDR 0x4800
 
 #endif // COMMON_H_INCLUDED
