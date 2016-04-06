@@ -12,21 +12,29 @@ void sync_isr(int x);
 int main(void) {
 	unsigned *done_flag, *inf_clks, *up_clks, *p, i, j, reps, slave_core_addr, out_mem_offset, timer_value_0, timer_value_1;
 	float *xt, *wk, *update_wk, *nu_opt, *nu_k, *nu_k0, *nu_k1, *nu_k2, *dest, subgrad[WK_ROWS], scaling, rms_wk, rms_wk_reciprocol;
+#ifdef USE_MASTER_NODE
+    unsigned *ready_flag, master_node_addr;
+#else
+#ifndef USE_ARM
+    unsigned sample;
+    float *next_sample;
+#endif
+#endif
 
-	xt = (float *)XT_MEM_ADDR;	            // Address of xt (56 x 1)
-	wk = (float *)WK_MEM_ADDR;	            // Address of dictionary atom (56 x 1)
-	update_wk = (float *)UP_WK_MEM_ADDR;	// Address of update atom (56 x 1)
-	nu_opt = (float *)NU_OPT_MEM_ADDR;      // Address of optimal dual variable (56 x 1)
-	nu_k0 = (float *)NU_K0_MEM_ADDR;	    // Address of node 0 dual variable estimate (56 x 1)
-	nu_k1 = (float *)NU_K1_MEM_ADDR;        // Address of node 1 dual variable estimate (56 x 1)
-	nu_k2 = (float *)NU_K2_MEM_ADDR;        // Address of node 2 dual variable estimate (56 x 1)
+	xt = (float *)XT_MEM_ADDR;	            // Address of xt (WK_ROWS x 1)
+	wk = (float *)WK_MEM_ADDR;	            // Address of dictionary atom (WK_ROWS x 1)
+	update_wk = (float *)UP_WK_MEM_ADDR;	// Address of update atom (WK_ROWS x 1)
+	nu_opt = (float *)NU_OPT_MEM_ADDR;      // Address of optimal dual variable (WK_ROWS x 1)
+	nu_k0 = (float *)NU_K0_MEM_ADDR;	    // Address of node 0 dual variable estimate (WK_ROWS x 1)
+	nu_k1 = (float *)NU_K1_MEM_ADDR;        // Address of node 1 dual variable estimate (WK_ROWS x 1)
+	nu_k2 = (float *)NU_K2_MEM_ADDR;        // Address of node 2 dual variable estimate (WK_ROWS x 1)
 
     p = CLEAR_FLAG;
     out_mem_offset = (unsigned)(e_group_config.core_col*sizeof(unsigned));
 
 #ifdef USE_MASTER_NODE
-    unsigned master_node_addr = (unsigned)e_get_global_address_on_chip(MASTER_NODE_ROW, MASTER_NODE_COL, p);
-	unsigned *ready_flag = (unsigned *)(master_node_addr + READY_MEM_ADDR + out_mem_offset);
+    master_node_addr = (unsigned)e_get_global_address_on_chip(MASTER_NODE_ROW, MASTER_NODE_COL, p);
+	ready_flag = (unsigned *)(master_node_addr + READY_MEM_ADDR + out_mem_offset);
 	inf_clks = (unsigned *)(master_node_addr + INF_CLKS_MEM_ADDR + out_mem_offset);
     up_clks = (unsigned *)(master_node_addr + UP_CLKS_MEM_ADDR + out_mem_offset);
     done_flag = (unsigned *)(master_node_addr + DONE_MEM_ADDR + out_mem_offset);	 // "Done" flag (1 x 1)
@@ -35,8 +43,6 @@ int main(void) {
     inf_clks = (unsigned *)(SHMEM_ADDR + (M*N*sizeof(unsigned)) + out_mem_offset);
     up_clks = (unsigned *)(SHMEM_ADDR + (2*M*N*sizeof(unsigned)) + out_mem_offset);	 // "Done" flag (1 x 1)
 #else
-    unsigned sample;
-    float *next_sample;
     done_flag = (unsigned *)(SHMEM_ADDR + out_mem_offset);
 #endif
 
