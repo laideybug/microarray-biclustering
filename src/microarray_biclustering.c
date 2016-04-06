@@ -75,7 +75,7 @@ int main(int argc, char *argv[]) {
 	e_set_host_verbosity(H_D0);
 
     // Open the workgroup
-	e_open(&dev, 0, 0, M, N);
+	e_open(&dev, NETWORK_ORIGIN_ROW, NETWORK_ORIGIN_COL, M, N);
     e_reset_group(&dev);
 
     // Initialise update dictionary and dual variable vectors with 0
@@ -156,14 +156,14 @@ int main(int argc, char *argv[]) {
             t_plus_one_reciprocol = 1.0f/(t+1);
 
             printf("\nConfiguration: Master Node - %i x %i\n", M, N);
-            printf("-------------------------------\n");
-            printf("Processed input sample: %i\n", t);
-            printf("Average clock cycles for inference step: %i clock cycles\n", avg_inf_clks);
+            printf("---------------------------------------\n");
+            printf("Processed input sample: %u\n", t);
+            printf("Average clock cycles for inference step: %u clock cycles\n", avg_inf_clks);
             printf("Average network speed of inference step: %.6f seconds\n", avg_inf_clks * ONE_OVER_E_CYCLES);
-            printf("Average clock cycles for update step: %i clock cycles\n", avg_up_clks);
+            printf("Average clock cycles for update step: %u clock cycles\n", avg_up_clks);
             printf("Average network speed of update step: %.6f seconds\n", avg_up_clks * ONE_OVER_E_CYCLES);
-            printf("Master node clock cycles: %i clock cycles\n", masternode_clks);
-            printf("Section clock cycles: %i clock cycles\n", section_clks);
+            printf("Master node clock cycles: %u clock cycles\n", masternode_clks);
+            printf("Section clock cycles: %u clock cycles\n", section_clks);
             printf("-------------------------------\n");
             printf("Percent complete: %.2f%%\n", (t+1)*100.0f*ONE_OVER_IN_COLS);
             printf("Average speed: %.6f seconds/sample\n", secs*t_plus_one_reciprocol);
@@ -248,11 +248,12 @@ int main(int argc, char *argv[]) {
 
         printf("\nConfiguration: ARM - %i x %i\n", M, N);
         printf("-------------------------------\n");
-        printf("Processed input sample: %i\n", t);
-        printf("Average clock cycles for inference step: %i clock cycles\n", avg_inf_clks);
+        printf("Processed input sample: %u\n", t);
+        printf("Average clock cycles for inference step: %u clock cycles\n", avg_inf_clks);
         printf("Average network speed of inference step: %.6f seconds\n", avg_inf_clks * ONE_OVER_E_CYCLES);
-        printf("Average clock cycles for update step: %i clock cycles\n", avg_up_clks);
+        printf("Average clock cycles for update step: %u clock cycles\n", avg_up_clks);
         printf("Average network speed of update step: %.6f seconds\n", avg_up_clks * ONE_OVER_E_CYCLES);
+        printf("ARM clock cycles: %u clock cycles\n", (unsigned)diff);
         printf("-------------------------------\n");
         printf("Percent complete: %.2f%%\n", (t+1)*100.0f*ONE_OVER_IN_COLS);
         printf("Average speed: %.6f seconds/sample\n", secs*t_plus_one_reciprocol);

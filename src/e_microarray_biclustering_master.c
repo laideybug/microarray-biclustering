@@ -3,9 +3,6 @@
 #include "common.h"
 #include "e_microarray_biclustering_utils.h"
 
-//#define MAX(x,y) (((x) > (y)) ? (x) : (y))
-//#define MIN(x,y) (((x) < (y)) ? (x) : (y))
-
 void sync_isr(int x);
 
 int main(void) {
@@ -57,24 +54,24 @@ int main(void) {
         e_ctimer_set(E_CTIMER_0, E_CTIMER_MAX);
         e_ctimer_start(E_CTIMER_0, E_CTIMER_CLK);
 
-        *slave_done_counter = 0;
 		xt = (float *)(SHMEM_ADDR + i*IN_ROWS*sizeof(float));
 
-        for (j = 0; j < M; ++j) {
+        for (j = NETWORK_ORIGIN_ROW; j < M + NETWORK_ORIGIN_ROW; ++j) {
             for (k = 0; k < WK_ROWS; ++k) {
                 xt_k[k] = *(xt + (k + j*WK_ROWS));
             }
 
-            for (k = 0; k < N; ++k) {
+            for (k = NETWORK_ORIGIN_COL; k < N + NETWORK_ORIGIN_COL; ++k) {
                 slave_core_addr = (unsigned)e_get_global_address_on_chip(j, k, p);
                 dest = (float *)(slave_core_addr + XT_MEM_ADDR);
                 e_dma_copy(dest, xt_k, WK_ROWS*sizeof(float));
-                //e_global_address_irq_set(j, k, E_SYNC);
             }
         }
 
-        for (j = 0; j < M; ++j) {
-            for (k = 0; k < N; ++k) {
+        *slave_done_counter = 0;
+
+        for (j = NETWORK_ORIGIN_ROW; j < M + NETWORK_ORIGIN_ROW; ++j) {
+            for (k = NETWORK_ORIGIN_COL; k < N + NETWORK_ORIGIN_COL; ++k) {
                 e_global_address_irq_set(j, k, E_SYNC);
             }
         }
@@ -85,7 +82,6 @@ int main(void) {
         // Put core in idle state while waiting for signal from network
         __asm__ __volatile__("idle");
 
-        *slave_done_counter = 0;
         timer_value_1 = E_CTIMER_MAX - e_ctimer_stop(E_CTIMER_1);
 
         inf_clks = 0;
@@ -93,12 +89,10 @@ int main(void) {
 
         for (j = 0; j < M_N; ++j) {
             slave_inf_clks = (unsigned *)(INF_CLKS_MEM_ADDR + j*sizeof(unsigned));
-            //inf_clks = MAX(inf_clks, *slave_inf_clks);
             inf_clks += *slave_inf_clks;
             *slave_inf_clks = 0;
 
             slave_up_clks = (unsigned *)(UP_CLKS_MEM_ADDR + j*sizeof(unsigned));
-            //up_clks = MAX(up_clks, *slave_up_clks);
             up_clks += *slave_up_clks;
             *slave_up_clks = 0;
         }
