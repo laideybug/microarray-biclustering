@@ -2,6 +2,7 @@
 #include <e-loader.h>
 #include <stdio.h>
 #include <time.h>
+#include <unistd.h>
 #include "common.h"
 #include "microarray_biclustering_utils.h"
 
@@ -15,7 +16,7 @@ int main(int argc, char *argv[]) {
 #ifdef USE_MASTER_NODE
     unsigned masternode_clks;
     int last_t;
-#elifdef USE_ARM
+#elif defined USE_ARM
     unsigned inf_clks, up_clks;
     float xt[IN_ROWS];
     unsigned done[M_N], j;
@@ -148,7 +149,7 @@ int main(int argc, char *argv[]) {
             last_t = t;
             secs += masternode_clks * ONE_OVER_E_CYCLES;
 
-            printf("\nConfiguration: Master Node\n");
+            printf("\nConfiguration: Master Node - %i x %i\n", M, N);
             printf("-------------------------------\n");
             printf("Processed input sample: %i\n", t);
             printf("Average clock cycles for inference step: %i clock cycles\n", avg_inf_clks);
@@ -171,7 +172,7 @@ int main(int argc, char *argv[]) {
 
     e_close(&dev_master);
 
-#elifdef USE_ARM
+#elif defined USE_ARM
     // Allocate shared memory
     if (e_alloc(&mbuf, SHM_OFFSET, 3*M*N*sizeof(unsigned)) != E_OK) {
         printf("Error: Failed to allocate shared memory\n");
@@ -228,7 +229,7 @@ int main(int argc, char *argv[]) {
         diff = clock() - start;
         secs = diff / CLOCKS_PER_SEC;
 
-        printf("\nConfiguration: ARM\n");
+        printf("\nConfiguration: ARM - %i x %i\n", M, N);
         printf("-------------------------------\n");
         printf("Processed input sample: %i\n", t);
         printf("Average clock cycles for inference step: %i clock cycles\n", avg_inf_clks);
