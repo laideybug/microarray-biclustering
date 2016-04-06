@@ -12,7 +12,7 @@
 #ifdef USE_MASTER_NODE
 #define MASTER_NODE         1
 #ifdef USE_ARM
-#undefine
+#undefine USE_ARM
 #endif
 #else
 #define MASTER_NODE         0

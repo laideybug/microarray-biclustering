@@ -144,18 +144,19 @@ int main(int argc, char *argv[]) {
         e_read(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float) + (4*sizeof(unsigned)), &masternode_clks, sizeof(unsigned));
 
         if (t - last_t) {
-            avg_inf_clks = (unsigned)(total_inf_clks * ONE_OVER_N);
-            avg_up_clks = (unsigned)(total_up_clks * ONE_OVER_N);
+            avg_inf_clks = (unsigned)(total_inf_clks * ONE_OVER_M_N);
+            avg_up_clks = (unsigned)(total_up_clks * ONE_OVER_M_N);
             last_t = t;
             secs += masternode_clks * ONE_OVER_E_CYCLES;
 
             printf("\nConfiguration: Master Node - %i x %i\n", M, N);
-            printf("-------------------------------\n");
-            printf("Processed input sample: %i\n", t);
-            printf("Average clock cycles for inference step: %i clock cycles\n", avg_inf_clks);
+            printf("---------------------------------------\n");
+            printf("Processed input sample: %u\n", t);
+            printf("Average clock cycles for inference step: %u clock cycles\n", avg_inf_clks);
             printf("Average network speed of inference step: %.6f seconds\n", avg_inf_clks * ONE_OVER_E_CYCLES);
-            printf("Average clock cycles for update step: %i clock cycles\n", avg_up_clks);
+            printf("Average clock cycles for update step: %u clock cycles\n", avg_up_clks);
             printf("Average network speed of update step: %.6f seconds\n", avg_up_clks * ONE_OVER_E_CYCLES);
+            printf("Master node clock cycles: %u clock cycles\n", masternode_clks);
             printf("-------------------------------\n");
             printf("Percent complete: %.2f%%\n", (t+1)*100.0f*ONE_OVER_IN_COLS);
             printf("Average speed: %.2f seconds/sample\n", secs/(t+1));
@@ -174,7 +175,7 @@ int main(int argc, char *argv[]) {
 
 #elif defined USE_ARM
     // Allocate shared memory
-    if (e_alloc(&mbuf, SHM_OFFSET, 3*M*N*sizeof(unsigned)) != E_OK) {
+    if (e_alloc(&mbuf, SHM_OFFSET, 3*M_N*sizeof(unsigned)) != E_OK) {
         printf("Error: Failed to allocate shared memory\n");
         return EXIT_FAILURE;
     };
@@ -217,9 +218,9 @@ int main(int argc, char *argv[]) {
         total_up_clks = 0;
 
         for (j = 0; j < N; ++j) {
-            e_read(&mbuf, 0, 0, j*sizeof(unsigned) + (M*N*sizeof(unsigned)), &inf_clks, sizeof(unsigned));
+            e_read(&mbuf, 0, 0, j*sizeof(unsigned) + (M_N*sizeof(unsigned)), &inf_clks, sizeof(unsigned));
             total_inf_clks += inf_clks;
-            e_read(&mbuf, 0, 0, j*sizeof(unsigned) + (2*M*N*sizeof(unsigned)), &up_clks, sizeof(unsigned));
+            e_read(&mbuf, 0, 0, j*sizeof(unsigned) + (2*M_N*sizeof(unsigned)), &up_clks, sizeof(unsigned));
             total_up_clks += up_clks;
         }
 
@@ -231,10 +232,10 @@ int main(int argc, char *argv[]) {
 
         printf("\nConfiguration: ARM - %i x %i\n", M, N);
         printf("-------------------------------\n");
-        printf("Processed input sample: %i\n", t);
-        printf("Average clock cycles for inference step: %i clock cycles\n", avg_inf_clks);
+        printf("Processed input sample: %u\n", t);
+        printf("Average clock cycles for inference step: %u clock cycles\n", avg_inf_clks);
         printf("Average network speed of inference step: %.6f seconds\n", avg_inf_clks * ONE_OVER_E_CYCLES);
-        printf("Average clock cycles for update step: %i clock cycles\n", avg_up_clks);
+        printf("Average clock cycles for update step: %u clock cycles\n", avg_up_clks);
         printf("Average network speed of update step: %.6f seconds\n", avg_up_clks * ONE_OVER_E_CYCLES);
         printf("-------------------------------\n");
         printf("Percent complete: %.2f%%\n", (t+1)*100.0f*ONE_OVER_IN_COLS);
