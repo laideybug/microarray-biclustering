@@ -10,15 +10,15 @@ float sign(float value);
 void sync_isr(int x);
 
 int main(void) {
-	unsigned *done_flag, *inf_clks, *up_clks, *p, i, j, reps, slave_core_addr, out_mem_offset, timer_value_0, timer_value_1;
+	unsigned *inf_clks, *up_clks, *p, i, j, reps, slave_core_addr, out_mem_offset, timer_value_0, timer_value_1;
 	float *xt, *wk, *update_wk, *nu_opt, *nu_k, *nu_k0, *nu_k1, *nu_k2, *dest, subgrad[WK_ROWS], scaling, rms_wk, rms_wk_reciprocol;
 #ifdef USE_MASTER_NODE
-    unsigned *ready_flag, master_node_addr;
+    unsigned *ready_flag, *done_flag, master_node_addr;
+#elif defined USE_ARM
+    unsigned *done_flag;
 #else
-#ifndef USE_ARM
-    unsigned sample;
+    unsigned *sample_no, samples;
     float *next_sample;
-#endif
 #endif
 
 	xt = (float *)XT_MEM_ADDR;	            // Address of xt (WK_ROWS x 1)
@@ -37,13 +37,15 @@ int main(void) {
 	ready_flag = (unsigned *)(master_node_addr + READY_MEM_ADDR + out_mem_offset);
 	inf_clks = (unsigned *)(master_node_addr + INF_CLKS_MEM_ADDR + out_mem_offset);
     up_clks = (unsigned *)(master_node_addr + UP_CLKS_MEM_ADDR + out_mem_offset);
-    done_flag = (unsigned *)(master_node_addr + DONE_MEM_ADDR + out_mem_offset);	 // "Done" flag (1 x 1)
+    done_flag = (unsigned *)(master_node_addr + DONE_MEM_ADDR + out_mem_offset);
 #elif defined USE_ARM
 	done_flag = (unsigned *)(SHMEM_ADDR + out_mem_offset);
-    inf_clks = (unsigned *)(SHMEM_ADDR + (M*N*sizeof(unsigned)) + out_mem_offset);
-    up_clks = (unsigned *)(SHMEM_ADDR + (2*M*N*sizeof(unsigned)) + out_mem_offset);	 // "Done" flag (1 x 1)
+    inf_clks = (unsigned *)(SHMEM_ADDR + M_N*sizeof(unsigned) + out_mem_offset);
+    up_clks = (unsigned *)(SHMEM_ADDR + 2*M_N*sizeof(unsigned) + out_mem_offset);
 #else
-    done_flag = (unsigned *)(SHMEM_ADDR + out_mem_offset);
+    sample_no = (unsigned *)(SHMEM_ADDR + IN_ROWS*IN_COLS*sizeof(float) + out_mem_offset);
+    inf_clks = (unsigned *)(SHMEM_ADDR + IN_ROWS*IN_COLS*sizeof(float) + M_N*sizeof(unsigned) + out_mem_offset);
+    up_clks = (unsigned *)(SHMEM_ADDR + IN_ROWS*IN_COLS*sizeof(float) + 2*M_N*sizeof(unsigned) + out_mem_offset);
 #endif
 
     // Address of this cores dual variable estimate
@@ -53,23 +55,21 @@ int main(void) {
     e_irq_mask(E_SYNC, E_FALSE);
     e_irq_global_mask(E_FALSE);
 
-#ifdef USE_MASTER_NODE
-    (*(ready_flag)) = SET_FLAG;
-#endif
-
     // Initialise barriers
     e_barrier_init(barriers, tgt_bars);
 
-#ifdef USE_ARM
-    for (sample = 0; sample < IN_COLS; ++sample) {
-        next_sample = (float *)(SHMEM_ADDR + sample*IN_ROWS*sizeof(float));
-        e_memcopy(xt, next_sample, IN_ROWS*sizeof(float));
-#else
-    while (1) {
 #ifdef USE_MASTER_NODE
+    (*(ready_flag)) = SET_FLAG;
+
+    while (1) {
         // Put core in idle state
         __asm__ __volatile__("idle");
-#endif
+#elif defined USE_ARM
+    while (1) {
+#else
+    for (samples = 0; samples < IN_COLS; ++samples) {
+        next_sample = (float *)(SHMEM_ADDR + samples*IN_ROWS*sizeof(float));
+        e_memcopy(xt, next_sample, IN_ROWS*sizeof(float));
 #endif
 
         // Set timers for benchmarking
@@ -166,12 +166,15 @@ int main(void) {
 		// Raising "done" flag for master node
 	   	(*(done_flag)) = SET_FLAG;
 
-        // Put core in idle state
+	   	// Put core in idle state
         __asm__ __volatile__("idle");
+#else
+        // Write benchmark values
+        (*(sample_no)) = samples;
+		(*(inf_clks)) = timer_value_0;
+		(*(up_clks)) = timer_value_1;
 #endif
 	}
-
-	(*(done_flag)) = SET_FLAG;
 
 	// Put core in idle state
     __asm__ __volatile__("idle");

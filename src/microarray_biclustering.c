@@ -9,19 +9,19 @@
 #define SHM_OFFSET 0x01000000
 
 int main(int argc, char *argv[]) {
-    unsigned current_row, current_col, i, all_done, avg_inf_clks, avg_up_clks, total_inf_clks, total_up_clks, clr;
+    unsigned current_row, current_col, i, avg_inf_clks, avg_up_clks, total_inf_clks, total_up_clks, clr;
     float input_data[IN_ROWS][IN_COLS], data_point, dictionary_w[IN_ROWS][N], update_wk[IN_ROWS], dual_var[IN_ROWS], secs;
     int t;
     char path[100] = "../data/data.txt";
 #ifdef USE_MASTER_NODE
-    unsigned masternode_clks;
+    unsigned masternode_clks, all_done;
     int last_t;
 #elif defined USE_ARM
-    unsigned inf_clks, up_clks;
+    unsigned inf_clks, up_clks, all_done;
     float xt[IN_ROWS];
     unsigned done[M_N], j;
 #else
-    unsigned done[M_N];
+    int last_t;
 #endif
 
     clr = CLEAR_FLAG;
@@ -166,7 +166,6 @@ int main(int argc, char *argv[]) {
         }
 
         if (all_done == 1) {
-            printf("Done.");
             break;
         }
     }
@@ -245,11 +244,9 @@ int main(int argc, char *argv[]) {
         printf("Remaining time: %.2f seconds\n\n", (secs/(t+1))*IN_COLS - secs);
     }
 
-    printf("Done.");
-
 #else
     // Allocate shared memory
-    if (e_alloc(&mbuf, SHM_OFFSET, IN_ROWS*IN_COLS*sizeof(float) + M_N*sizeof(unsigned)) != E_OK) {
+    if (e_alloc(&mbuf, SHM_OFFSET, IN_ROWS*IN_COLS*sizeof(float) + 3*M_N*sizeof(unsigned)) != E_OK) {
         printf("Error: Failed to allocate shared memory\n");
         return EXIT_FAILURE;
     };
@@ -264,25 +261,49 @@ int main(int argc, char *argv[]) {
 
     printf("Network started...\n\n");
 
+    last_t = -1;
+
+    clock_t start = clock(), diff;
+
     // Start workgroup
     e_start_group(&dev);
 
     while (1) {
-        all_done = 0;
+        e_read(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float), &t, sizeof(int));
+        e_read(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float) + M_N*sizeof(unsigned), &total_inf_clks, sizeof(unsigned));
+        e_read(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float) + 2*M_N*sizeof(unsigned), &total_up_clks, sizeof(unsigned));
 
-        for (i = 0; i < M_N; ++i) {
-            e_read(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float) + i*sizeof(unsigned), &done[i], sizeof(unsigned));
-            all_done += done[i];
+        if (t - last_t >= 1) {
+            avg_inf_clks = total_inf_clks;
+            avg_up_clks = total_up_clks;
+            last_t = t;
+            diff = clock() - start;
+            secs = diff / CLOCKS_PER_SEC;
+
+            printf("\nConfiguration: Autonomous - %i x %i\n", M, N);
+            printf("---------------------------------------\n");
+            printf("Processed input sample: %u\n", t);
+            printf("Node clock cycles for inference step: %u clock cycles\n", avg_inf_clks);
+            printf("Average network speed of inference step: %.6f seconds\n", avg_inf_clks * ONE_OVER_E_CYCLES);
+            printf("Average clock cycles for update step: %u clock cycles\n", avg_up_clks);
+            printf("Average network speed of update step: %.6f seconds\n", avg_up_clks * ONE_OVER_E_CYCLES);
+            printf("ARM clock cycles: %u clock cycles\n", (unsigned)diff);
+            printf("-------------------------------\n");
+            printf("Percent complete: %.2f%%\n", (t+1)*100.0f*ONE_OVER_IN_COLS);
+            printf("Average speed: %.2f seconds/sample\n", secs/(t+1));
+            printf("Time elapsed: %.2f seconds\n", secs);
+            printf("Total time estimate: %.2f seconds\n", (secs/(t+1))*IN_COLS);
+            printf("Remaining time estimate: %.2f seconds\n\n", (secs/(t+1))*IN_COLS - secs);
         }
 
-        if (all_done == M_N) {
+        if (t == IN_COLS -1) {
             break;
         }
     }
 
-    printf("Done.");
 #endif
 
+    printf("Done.");
     e_close(&dev);
     e_free(&mbuf);
     e_finalize();

@@ -5,7 +5,7 @@
 #include <string.h>
 
 // Configuration macros
-#define USE_MASTER_NODE
+//#define USE_MASTER_NODE
 //#define USE_ARM
 #define USE_DMA
 
