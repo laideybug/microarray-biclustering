@@ -69,6 +69,12 @@ int main(void) {
                 slave_core_addr = (unsigned)e_get_global_address_on_chip(j, k, p);
                 dest = (float *)(slave_core_addr + XT_MEM_ADDR);
                 e_dma_copy(dest, xt_k, WK_ROWS*sizeof(float));
+                //e_global_address_irq_set(j, k, E_SYNC);
+            }
+        }
+
+        for (j = 0; j < M; ++j) {
+            for (k = 0; k < N; ++k) {
                 e_global_address_irq_set(j, k, E_SYNC);
             }
         }
