@@ -155,7 +155,7 @@ int main(int argc, char *argv[]) {
             secs += masternode_clks * ONE_OVER_E_CYCLES;
             t_plus_one_reciprocol = 1.0f/(t+1);
 
-            printf("\nConfiguration: Master Node\n");
+            printf("\nConfiguration: Master Node - %i x %i\n", M, N);
             printf("-------------------------------\n");
             printf("Processed input sample: %i\n", t);
             printf("Average clock cycles for inference step: %i clock cycles\n", avg_inf_clks);
@@ -246,7 +246,7 @@ int main(int argc, char *argv[]) {
         secs = diff / CLOCKS_PER_SEC;
         t_plus_one_reciprocol = 1.0f/(t+1);
 
-        printf("\nConfiguration: ARM\n");
+        printf("\nConfiguration: ARM - %i x %i\n", M, N);
         printf("-------------------------------\n");
         printf("Processed input sample: %i\n", t);
         printf("Average clock cycles for inference step: %i clock cycles\n", avg_inf_clks);
