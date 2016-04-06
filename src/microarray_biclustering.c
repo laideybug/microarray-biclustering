@@ -8,8 +8,8 @@
 #define SHM_OFFSET 0x01000000
 
 int main(int argc, char *argv[]) {
-    unsigned current_row, current_col, i, all_done, avg_inf_clks, avg_up_clks, total_inf_clks, total_up_clks, clr;
-    float input_data[IN_ROWS][IN_COLS], data_point, dictionary_w[IN_ROWS][N], update_wk[IN_ROWS], dual_var[IN_ROWS], secs, t_plus_one_reciprocol;
+    unsigned current_row, current_col, i, j, k, all_done, avg_inf_clks, avg_up_clks, total_inf_clks, total_up_clks, clr;
+    float input_data[IN_ROWS][IN_COLS], dictionary_w[IN_ROWS][N], dictionary_wk[IN_ROWS], dictionary_wk_i[WK_ROWS], update_wk[WK_ROWS], dual_var[WK_ROWS], data_point, secs, t_plus_one_reciprocol;
     int t;
     char path[100] = "../data/data.txt";
 #ifdef USE_MASTER_NODE
@@ -18,7 +18,7 @@ int main(int argc, char *argv[]) {
 #else
     unsigned inf_clks, up_clks;
     float xt[IN_ROWS], xt_k[WK_ROWS];
-    int done[M*N], j, k;
+    int done[M_N];
 #endif
 
     clr = CLEAR_FLAG;
@@ -79,20 +79,25 @@ int main(int argc, char *argv[]) {
     e_reset_group(&dev);
 
     // Initialise update dictionary and dual variable vectors with 0
-    fillVector(IN_ROWS, update_wk, 0.0f);
-    fillVector(IN_ROWS, dual_var, 0.0f);
+    fillVector(WK_ROWS, update_wk, 0.0f);
+    fillVector(WK_ROWS, dual_var, 0.0f);
 
     // Load the dictionary atoms into each core
-    for (i = 0; i < N; ++i) {
-        float dictionary_wk[IN_ROWS];
-        getColumn(IN_ROWS, N, i, dictionary_w, dictionary_wk);
+    for (j = 0; j < M; ++j) {
+        for (k = 0; k < N; ++k) {
+            getColumn(IN_ROWS, N, k, dictionary_w, dictionary_wk);
 
-        e_write(&dev, 0, i, WK_MEM_ADDR, &dictionary_wk, IN_ROWS*sizeof(float));
-        e_write(&dev, 0, i, UP_WK_MEM_ADDR, &update_wk, IN_ROWS*sizeof(float));
-        e_write(&dev, 0, i, NU_OPT_MEM_ADDR, &dual_var, IN_ROWS*sizeof(float));
-        e_write(&dev, 0, i, NU_K0_MEM_ADDR, &dual_var, IN_ROWS*sizeof(float));
-        e_write(&dev, 0, i, NU_K1_MEM_ADDR, &dual_var, IN_ROWS*sizeof(float));
-        e_write(&dev, 0, i, NU_K2_MEM_ADDR, &dual_var, IN_ROWS*sizeof(float));
+            for (i = 0; i < WK_ROWS; ++i) {
+                dictionary_wk_i[i] = *(dictionary_wk + (i + j*WK_ROWS));
+            }
+
+            e_write(&dev, j, k, WK_MEM_ADDR, &dictionary_wk_i, WK_ROWS*sizeof(float));
+            e_write(&dev, j, k, UP_WK_MEM_ADDR, &update_wk, WK_ROWS*sizeof(float));
+            e_write(&dev, j, k, NU_OPT_MEM_ADDR, &dual_var, WK_ROWS*sizeof(float));
+            e_write(&dev, j, k, NU_K0_MEM_ADDR, &dual_var, WK_ROWS*sizeof(float));
+            e_write(&dev, j, k, NU_K1_MEM_ADDR, &dual_var, WK_ROWS*sizeof(float));
+            e_write(&dev, j, k, NU_K2_MEM_ADDR, &dual_var, WK_ROWS*sizeof(float));
+        }
     }
 
      // Load program to the workgroup but do not run yet
@@ -142,10 +147,10 @@ int main(int argc, char *argv[]) {
         e_read(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float) + (5*sizeof(unsigned)), &section_clks, sizeof(unsigned));
 
         if (t - last_t) {
-            //avg_inf_clks = (unsigned)(total_inf_clks * ONE_OVER_M_N);
-            //avg_up_clks = (unsigned)(total_up_clks * ONE_OVER_M_N);
-            avg_inf_clks = (unsigned)(total_inf_clks);
-            avg_up_clks = (unsigned)(total_up_clks);
+            avg_inf_clks = (unsigned)(total_inf_clks * ONE_OVER_M_N);
+            avg_up_clks = (unsigned)(total_up_clks * ONE_OVER_M_N);
+            //avg_inf_clks = (unsigned)(total_inf_clks);
+            //avg_up_clks = (unsigned)(total_up_clks);
             last_t = t;
             secs += masternode_clks * ONE_OVER_E_CYCLES;
             t_plus_one_reciprocol = 1.0f/(t+1);
@@ -177,7 +182,7 @@ int main(int argc, char *argv[]) {
 
 #else
     // Allocate shared memory
-    if (e_alloc(&mbuf, SHM_OFFSET, 3*M*N*sizeof(unsigned)) != E_OK) {
+    if (e_alloc(&mbuf, SHM_OFFSET, 3*M_N*sizeof(unsigned)) != E_OK) {
         printf("Error: Failed to allocate shared memory\n");
         return EXIT_FAILURE;
     };
@@ -214,12 +219,12 @@ int main(int argc, char *argv[]) {
         while (1) {
             all_done = 0;
 
-            for (j = 0; j < M*N; ++j) {
+            for (j = 0; j < M_N; ++j) {
                 e_read(&mbuf, 0, 0, j*sizeof(int), &done[j], sizeof(int));
                 all_done += done[j];
             }
 
-            if (all_done == M*N) {
+            if (all_done == M_N) {
                 break;
             }
         }
@@ -227,10 +232,10 @@ int main(int argc, char *argv[]) {
         total_inf_clks = 0;
         total_up_clks = 0;
 
-        for (j = 0; j < M*N; ++j) {
-            e_read(&mbuf, 0, 0, j*sizeof(unsigned) + (M*N*sizeof(unsigned)), &inf_clks, sizeof(unsigned));
+        for (j = 0; j < M_N; ++j) {
+            e_read(&mbuf, 0, 0, j*sizeof(unsigned) + (M_N*sizeof(unsigned)), &inf_clks, sizeof(unsigned));
             total_inf_clks += inf_clks;
-            e_read(&mbuf, 0, 0, j*sizeof(unsigned) + (2*M*N*sizeof(unsigned)), &up_clks, sizeof(unsigned));
+            e_read(&mbuf, 0, 0, j*sizeof(unsigned) + (2*M_N*sizeof(unsigned)), &up_clks, sizeof(unsigned));
             total_up_clks += up_clks;
         }
 

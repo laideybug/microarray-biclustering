@@ -38,8 +38,8 @@ int main(void) {
     mutex = (int *)DONE_MUTEX_MEM_ADDR;
 #else
 	done_flag = (unsigned *)(SHMEM_ADDR + out_mem_offset);
-    inf_clks = (unsigned *)(SHMEM_ADDR + (M*N*sizeof(unsigned)) + out_mem_offset);
-    up_clks = (unsigned *)(SHMEM_ADDR + (2*M*N*sizeof(unsigned)) + out_mem_offset);
+    inf_clks = (unsigned *)(SHMEM_ADDR + (M_N*sizeof(unsigned)) + out_mem_offset);
+    up_clks = (unsigned *)(SHMEM_ADDR + (2*M_N*sizeof(unsigned)) + out_mem_offset);
 #endif
 
     // Address of this cores dual variable estimate
@@ -61,14 +61,14 @@ int main(void) {
     e_barrier_init(barriers, tgt_bars);
 
     while (1) {
+        // Set timers for benchmarking
+        e_ctimer_set(E_CTIMER_0, E_CTIMER_MAX);
+        e_ctimer_start(E_CTIMER_0, E_CTIMER_CLK);
+
 #ifdef USE_MASTER_NODE
         // Put core in idle state
         __asm__ __volatile__("idle");
 #endif
-
-        // Set timers for benchmarking
-        e_ctimer_set(E_CTIMER_0, E_CTIMER_MAX);
-        e_ctimer_start(E_CTIMER_0, E_CTIMER_CLK);
 
 		for (reps = 0; reps < NUM_ITER; ++reps) {
             *scaling_incomplete = 0.0f;
@@ -198,13 +198,11 @@ int main(void) {
 			}
 		}
 
-		//timer_value_1 = E_CTIMER_MAX - e_ctimer_stop(E_CTIMER_0);
+		timer_value_1 = E_CTIMER_MAX - e_ctimer_stop(E_CTIMER_0);
 
 #ifdef USE_MASTER_NODE
         // Aqcuire the mutex lock
 		e_global_mutex_lock(MASTER_NODE_ROW, MASTER_NODE_COL, mutex);
-
-        timer_value_1 = E_CTIMER_MAX - e_ctimer_stop(E_CTIMER_0);
         // Write benchmark values
 		(*(inf_clks)) = timer_value_0;
 		(*(up_clks)) = timer_value_1;
@@ -221,7 +219,10 @@ int main(void) {
             e_global_address_irq_set(MASTER_NODE_ROW, MASTER_NODE_COL, E_SYNC);
 	   	}
 #else
-        // Raising "done" flag
+        // Write benchmark values
+        (*(inf_clks)) = timer_value_0;
+		(*(up_clks)) = timer_value_1;
+		// Raising "done" flag
         (*(done_flag)) = SET_FLAG;
         // Put core in idle state
         __asm__ __volatile__("idle");
