@@ -5,11 +5,15 @@
 #include <string.h>
 
 // Configuration macros
-//#define USE_MASTER_NODE
+#define USE_MASTER_NODE
+//#define USE_ARM
 #define USE_DMA
 
 #ifdef USE_MASTER_NODE
 #define MASTER_NODE         1
+#ifdef USE_ARM
+#undefine
+#endif
 #else
 #define MASTER_NODE         0
 #endif
@@ -32,6 +36,7 @@
 #define WK_ROWS			    56
 #define M 				    1
 #define N 				    3
+#define M_N 				3
 #define ONE_OVER_N 		    0.333333333
 #define ONE_OVER_M_N 		0.333333333
 #define PI 				    3.141592654

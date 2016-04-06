@@ -4,7 +4,7 @@
 #include "common.h"
 #include "e-lib.h"
 
-extern volatile e_barrier_t barriers[M*N];
-extern          e_barrier_t *tgt_bars[M*N];
+extern volatile e_barrier_t barriers[M_N];
+extern          e_barrier_t *tgt_bars[M_N];
 
 #endif // E_SYNCH_H_INCLUDED

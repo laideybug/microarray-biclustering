@@ -10,8 +10,8 @@ float sign(float value);
 void sync_isr(int x);
 
 int main(void) {
-	unsigned *done_flag, *inf_clks, *up_clks, *p, i, j, reps, slave_core_addr, out_mem_offset, timer_value_0, timer_value_1;
-	float *xt, *wk, *update_wk, *nu_opt, *nu_k, *nu_k0, *nu_k1, *nu_k2, *dest, subgrad[WK_ROWS], scaling, rms_wk, rms_wk_reciprocol;
+	unsigned *done_flag, *inf_clks, *up_clks, *p, i, j, sample, reps, slave_core_addr, out_mem_offset, timer_value_0, timer_value_1;
+	float *xt, *wk, *update_wk, *nu_opt, *nu_k, *nu_k0, *nu_k1, *nu_k2, *dest, *next_sample, subgrad[WK_ROWS], scaling, rms_wk, rms_wk_reciprocol;
 
 	xt = (float *)XT_MEM_ADDR;	            // Address of xt (56 x 1)
 	wk = (float *)WK_MEM_ADDR;	            // Address of dictionary atom (56 x 1)
@@ -30,10 +30,12 @@ int main(void) {
 	inf_clks = (unsigned *)(master_node_addr + INF_CLKS_MEM_ADDR + out_mem_offset);
     up_clks = (unsigned *)(master_node_addr + UP_CLKS_MEM_ADDR + out_mem_offset);
     done_flag = (unsigned *)(master_node_addr + DONE_MEM_ADDR + out_mem_offset);	 // "Done" flag (1 x 1)
-#else
+#elseif USE_ARM
 	done_flag = (unsigned *)(SHMEM_ADDR + out_mem_offset);
     inf_clks = (unsigned *)(SHMEM_ADDR + (M*N*sizeof(unsigned)) + out_mem_offset);
     up_clks = (unsigned *)(SHMEM_ADDR + (2*M*N*sizeof(unsigned)) + out_mem_offset);	 // "Done" flag (1 x 1)
+#else
+    done_flag = (unsigned *)(SHMEM_ADDR + out_mem_offset);
 #endif
 
     // Address of this cores dual variable estimate
@@ -50,10 +52,16 @@ int main(void) {
     // Initialise barriers
     e_barrier_init(barriers, tgt_bars);
 
+#ifdef USE_ARM
+    for (sample = 0; sample < IN_COLS; ++sample) {
+        next_sample = (float *)(SHMEM_ADDR + sample*IN_ROWS*sizeof(float));
+        e_memcopy(xt, next_sample, IN_ROWS*sizeof(float));
+#else
     while (1) {
 #ifdef USE_MASTER_NODE
         // Put core in idle state
         __asm__ __volatile__("idle");
+#endif
 #endif
 
         // Set timers for benchmarking
@@ -136,17 +144,29 @@ int main(void) {
 
 		timer_value_1 = E_CTIMER_MAX - e_ctimer_stop(E_CTIMER_0);
 
+#ifdef USE_MASTER_NODE
 		// Write benchmark values
 		(*(inf_clks)) = timer_value_0;
 		(*(up_clks)) = timer_value_1;
 		// Raising "done" flag for master node
 	   	(*(done_flag)) = SET_FLAG;
 
-#ifndef USE_MASTER_NODE
+#elifdef USE_ARM
+        // Write benchmark values
+		(*(inf_clks)) = timer_value_0;
+		(*(up_clks)) = timer_value_1;
+		// Raising "done" flag for master node
+	   	(*(done_flag)) = SET_FLAG;
+
         // Put core in idle state
         __asm__ __volatile__("idle");
 #endif
 	}
+
+	(*(done_flag)) = SET_FLAG;
+
+	// Put core in idle state
+    __asm__ __volatile__("idle");
 
     return EXIT_SUCCESS;
 }

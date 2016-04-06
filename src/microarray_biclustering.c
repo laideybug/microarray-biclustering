@@ -15,10 +15,12 @@ int main(int argc, char *argv[]) {
 #ifdef USE_MASTER_NODE
     unsigned masternode_clks;
     int last_t;
-#else
+#elifdef USE_ARM
     unsigned inf_clks, up_clks;
     float xt[IN_ROWS];
-    int done[M*N], j;
+    unsigned done[M_N], j;
+#else
+    unsigned done[M_N];
 #endif
 
     clr = CLEAR_FLAG;
@@ -108,7 +110,7 @@ int main(int argc, char *argv[]) {
     e_reset_group(&dev_master);
 
     // Allocate shared memory
-    if (e_alloc(&mbuf, SHM_OFFSET, IN_ROWS*IN_COLS*sizeof(float) + MASTER_ADDR_NUM*sizeof(int)) != E_OK) {
+    if (e_alloc(&mbuf, SHM_OFFSET, IN_ROWS*IN_COLS*sizeof(float) + MASTER_ADDR_NUM*sizeof(unsigned)) != E_OK) {
         printf("Error: Failed to allocate shared memory\n");
         return EXIT_FAILURE;
     };
@@ -116,7 +118,7 @@ int main(int argc, char *argv[]) {
     // Write input data to shared memory
     e_write(&mbuf, 0, 0, 0x0, &input_data, IN_ROWS*IN_COLS*sizeof(float));
     // Clear done flag in shared memory
-    e_write(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float), &clr, sizeof(int));
+    e_write(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float), &clr, sizeof(unsigned));
 
     // Load program to the master core but do not run yet
     if (e_load("e_microarray_biclustering_master.srec", &dev_master, 0, 0, E_FALSE) != E_OK) {
@@ -169,7 +171,7 @@ int main(int argc, char *argv[]) {
 
     e_close(&dev_master);
 
-#else
+#elifdef USE_ARM
     // Allocate shared memory
     if (e_alloc(&mbuf, SHM_OFFSET, 3*M*N*sizeof(unsigned)) != E_OK) {
         printf("Error: Failed to allocate shared memory\n");
@@ -201,7 +203,7 @@ int main(int argc, char *argv[]) {
             all_done = 0;
 
             for (j = 0; j < N; ++j) {
-                e_read(&mbuf, 0, 0, j*sizeof(int), &done[j], sizeof(int));
+                e_read(&mbuf, 0, 0, j*sizeof(unsigned), &done[j], sizeof(unsigned));
                 all_done += done[j];
             }
 
@@ -239,6 +241,41 @@ int main(int argc, char *argv[]) {
         printf("Time elapsed: %.2f seconds\n", secs);
         printf("Total time: %.2f seconds\n", (secs/(t+1))*IN_COLS);
         printf("Remaining time: %.2f seconds\n\n", (secs/(t+1))*IN_COLS - secs);
+    }
+
+    printf("Done.");
+
+#else
+    // Allocate shared memory
+    if (e_alloc(&mbuf, SHM_OFFSET, IN_ROWS*IN_COLS*sizeof(float) + M_N*sizeof(unsigned)) != E_OK) {
+        printf("Error: Failed to allocate shared memory\n");
+        return EXIT_FAILURE;
+    };
+
+    // Write input data to shared memory
+    e_write(&mbuf, 0, 0, 0x0, &input_data, IN_ROWS*IN_COLS*sizeof(float));
+
+    // Clear done flag in shared memory
+    for (i = 0; i < M_N; ++i) {
+        e_write(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float) + i*sizeof(unsigned), &clr, sizeof(unsigned));
+    }
+
+    printf("Network started...\n\n");
+
+    // Start workgroup
+    e_start_group(&dev);
+
+    while (1) {
+        all_done = 0;
+
+        for (i = 0; i < M_N; ++i) {
+            e_read(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float) + i*sizeof(unsigned), &done[i], sizeof(unsigned));
+            all_done += done[i];
+        }
+
+        if (all_done == M_N) {
+            break;
+        }
     }
 
     printf("Done.");
