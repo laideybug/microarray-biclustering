@@ -125,7 +125,9 @@ int main(void) {
 			}
 		}
 
-		timer_value_0 = E_CTIMER_MAX - e_ctimer_get(E_CTIMER_0);
+		timer_value_0 = E_CTIMER_MAX - e_ctimer_stop(E_CTIMER_0);
+		e_ctimer_set(E_CTIMER_0, E_CTIMER_MAX);
+        e_ctimer_start(E_CTIMER_0, E_CTIMER_CLK);
 
 		*scaling_incomplete = 0.0f;
         scaling = 0.0f;
@@ -197,7 +199,7 @@ int main(void) {
 			}
 		}
 
-		timer_value_1 = timer_value_0 - e_ctimer_stop(E_CTIMER_0);
+		timer_value_1 = E_CTIMER_MAX - e_ctimer_stop(E_CTIMER_0);
 
 #ifdef USE_MASTER_NODE
         // Aqcuire the mutex lock
@@ -225,7 +227,7 @@ int main(void) {
         (*(done_flag)) = SET_FLAG;
         // Put core in idle state
         __asm__ __volatile__("idle");
-        
+
 #endif
 	}
 
