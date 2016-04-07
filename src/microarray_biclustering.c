@@ -139,6 +139,7 @@ int main(int argc, char *argv[]) {
     printf("Network started...\n\n");
 
     while (1) {
+        usleep(20000)
         e_read(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float), &all_done, sizeof(unsigned));
         e_read(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float) + sizeof(unsigned), &t, sizeof(int));
         e_read(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float) + (2*sizeof(unsigned)), &total_inf_clks, sizeof(unsigned));
@@ -146,7 +147,7 @@ int main(int argc, char *argv[]) {
         e_read(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float) + (4*sizeof(unsigned)), &masternode_clks, sizeof(unsigned));
         e_read(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float) + (5*sizeof(unsigned)), &section_clks, sizeof(unsigned));
 
-        if (t - last_t) {
+        if ((t - last_t) >= 1) {
             avg_inf_clks = (unsigned)(total_inf_clks * ONE_OVER_M_N);
             avg_up_clks = (unsigned)(total_up_clks * ONE_OVER_M_N);
             //avg_inf_clks = (unsigned)(total_inf_clks);
@@ -173,7 +174,6 @@ int main(int argc, char *argv[]) {
         }
 
         if (all_done == 1) {
-            printf("Done.");
             break;
         }
     }
@@ -262,9 +262,9 @@ int main(int argc, char *argv[]) {
         printf("Remaining time: %.2f seconds\n\n", secs*t_plus_one_reciprocol*IN_COLS - secs);
     }
 
-    printf("Done.");
 #endif
 
+    printf("Done.");
     e_close(&dev);
     e_free(&mbuf);
     e_finalize();

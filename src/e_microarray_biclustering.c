@@ -46,6 +46,7 @@ int main(void) {
     nu_k = (float *)(NU_K0_MEM_ADDR + (e_group_config.core_col * NU_MEM_OFFSET));
     // Address of this cores incomplete scaling value
     scaling_incomplete = (float *)(INC_SCAL_MEM_ADDR + (e_group_config.core_row * sizeof(float)));
+    // Address of this cores incomplete rms value
     rms_wk_incomplete = (float *)(INC_RMS_MEM_ADDR + (e_group_config.core_row * sizeof(float)));
 
     // Re-enable interrupts
@@ -53,12 +54,12 @@ int main(void) {
     e_irq_mask(E_SYNC, E_FALSE);
     e_irq_global_mask(E_FALSE);
 
+    // Initialise barriers
+    e_barrier_init(barriers, tgt_bars);
+
 #ifdef USE_MASTER_NODE
     (*(ready_flag)) = SET_FLAG;
 #endif
-
-    // Initialise barriers
-    e_barrier_init(barriers, tgt_bars);
 
     while (1) {
         // Set timers for benchmarking
@@ -124,9 +125,7 @@ int main(void) {
 			}
 		}
 
-		timer_value_0 = E_CTIMER_MAX - e_ctimer_stop(E_CTIMER_0);
-		e_ctimer_set(E_CTIMER_0, E_CTIMER_MAX);
-		e_ctimer_start(E_CTIMER_0, E_CTIMER_CLK);
+		timer_value_0 = E_CTIMER_MAX - e_ctimer_get(E_CTIMER_0);
 
 		*scaling_incomplete = 0.0f;
         scaling = 0.0f;
@@ -198,7 +197,7 @@ int main(void) {
 			}
 		}
 
-		timer_value_1 = E_CTIMER_MAX - e_ctimer_stop(E_CTIMER_0);
+		timer_value_1 = timer_value_0 - e_ctimer_stop(E_CTIMER_0);
 
 #ifdef USE_MASTER_NODE
         // Aqcuire the mutex lock
@@ -226,6 +225,7 @@ int main(void) {
         (*(done_flag)) = SET_FLAG;
         // Put core in idle state
         __asm__ __volatile__("idle");
+        
 #endif
 	}
 

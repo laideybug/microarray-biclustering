@@ -25,12 +25,12 @@ int main(void) {
     e_global_mutex_init(MASTER_NODE_ROW, MASTER_NODE_COL, mutex, NULL);
 
     // Initialise benchmark results
+    (*(all_done_flag)) = 0;
     (*(sample_no)) = -1;
     (*(total_inf_clks)) = 0;
     (*(total_up_clks)) = 0;
     (*(masternode_clks)) = 0;
     (*(section_clks)) = 0;
-    (*(all_done_flag)) = 0;
 
     // Re-enable interrupts
     e_irq_attach(E_SYNC, sync_isr);
@@ -103,8 +103,8 @@ int main(void) {
         (*(sample_no)) = i;
         (*(total_inf_clks)) = inf_clks;
         (*(total_up_clks)) = up_clks;
-        (*(section_clks)) = timer_value_1;
         (*(masternode_clks)) = timer_value_0;
+        (*(section_clks)) = timer_value_1;
 	}
 
 	// Raising "done" flag for host
