@@ -62,6 +62,9 @@ int main(void) {
 #endif
 
     while (1) {
+        timer_value_0 = 0;
+        timer_value_1 = 0;
+
         // Set timers for benchmarking
         e_ctimer_set(E_CTIMER_0, E_CTIMER_MAX);
         e_ctimer_start(E_CTIMER_0, E_CTIMER_CLK);
@@ -92,8 +95,12 @@ int main(void) {
                 }
             }
 
+            timer_value_0 += E_CTIMER_MAX - e_ctimer_stop(E_CTIMER_0);
+            e_ctimer_set(E_CTIMER_0, E_CTIMER_MAX);
+
             // Synch with all other cores
             e_barrier(barriers, tgt_bars);
+            e_ctimer_start(E_CTIMER_0, E_CTIMER_CLK);
 
             for (j = 0; j < e_group_config.group_rows; ++j) {
                 scaling_incomplete_k = (float *)(INC_SCAL_MEM_ADDR + j*sizeof(float));
@@ -116,8 +123,12 @@ int main(void) {
                 }
             }
 
+            timer_value_0 += E_CTIMER_MAX - e_ctimer_stop(E_CTIMER_0);
+            e_ctimer_set(E_CTIMER_0, E_CTIMER_MAX);
+
 	    	// Synch with all other cores
             e_barrier(barriers, tgt_bars);
+            e_ctimer_start(E_CTIMER_0, E_CTIMER_CLK);
 
 	    	// Average dual variable estimates
 			for (i = 0; i < WK_ROWS; ++i) {
@@ -125,7 +136,7 @@ int main(void) {
 			}
 		}
 
-		timer_value_0 = E_CTIMER_MAX - e_ctimer_stop(E_CTIMER_0);
+		timer_value_0 += E_CTIMER_MAX - e_ctimer_stop(E_CTIMER_0);
 		e_ctimer_set(E_CTIMER_0, E_CTIMER_MAX);
         e_ctimer_start(E_CTIMER_0, E_CTIMER_CLK);
 
@@ -146,8 +157,13 @@ int main(void) {
             }
         }
 
+        timer_value_1 += E_CTIMER_MAX - e_ctimer_stop(E_CTIMER_0);
+		e_ctimer_set(E_CTIMER_0, E_CTIMER_MAX);
+
         // Synch with all other cores
         e_barrier(barriers, tgt_bars);
+
+        e_ctimer_start(E_CTIMER_0, E_CTIMER_CLK);
 
         for (j = 0; j < e_group_config.group_rows; ++j) {
             scaling_incomplete_k = (float *)(INC_SCAL_MEM_ADDR + j*sizeof(float));
@@ -181,8 +197,13 @@ int main(void) {
             }
         }
 
+        timer_value_1 += E_CTIMER_MAX - e_ctimer_stop(E_CTIMER_0);
+		e_ctimer_set(E_CTIMER_0, E_CTIMER_MAX);
+
 		// Synch with all other cores
         e_barrier(barriers, tgt_bars);
+
+        e_ctimer_start(E_CTIMER_0, E_CTIMER_CLK);
 
         for (j = 0; j < e_group_config.group_rows; ++j) {
             rms_wk_incomplete_k = (float *)(INC_RMS_MEM_ADDR + j*sizeof(float));
@@ -199,7 +220,7 @@ int main(void) {
 			}
 		}
 
-		timer_value_1 = E_CTIMER_MAX - e_ctimer_stop(E_CTIMER_0);
+		timer_value_1 += E_CTIMER_MAX - e_ctimer_stop(E_CTIMER_0);
 
 #ifdef USE_MASTER_NODE
         // Aqcuire the mutex lock
