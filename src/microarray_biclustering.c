@@ -194,7 +194,8 @@ int main(int argc, char *argv[]) {
 
     printf("Network started...\n\n");
 
-    clock_t start = clock(), diff;
+    clock_t start = clock(), diff, current, arm_cycles;
+    clock_t last_clock = start;
 
     for (t = 0; t < IN_COLS; ++t) {
         getColumn(IN_ROWS, IN_COLS, t, input_data, xt);
@@ -241,8 +242,11 @@ int main(int argc, char *argv[]) {
         avg_inf_clks = (unsigned)(total_inf_clks * ONE_OVER_M_N);
         avg_up_clks = (unsigned)(total_up_clks * ONE_OVER_M_N);
 
-        diff = clock() - start;
+        current = clock();
+        diff = current - start;
         secs = diff / CLOCKS_PER_SEC;
+        arm_cycles = current - last_clock;
+        last_clock = current;
         t_plus_one_reciprocol = 1.0f/(t+1);
 
         printf("\nConfiguration: ARM - %i x %i\n", M, N);
@@ -252,7 +256,7 @@ int main(int argc, char *argv[]) {
         printf("Average network speed of inference step: %.6f seconds\n", avg_inf_clks * ONE_OVER_E_CYCLES);
         printf("Average clock cycles for update step: %u clock cycles\n", avg_up_clks);
         printf("Average network speed of update step: %.6f seconds\n", avg_up_clks * ONE_OVER_E_CYCLES);
-        printf("ARM clock cycles: %u clock cycles\n", (unsigned)diff);
+        printf("ARM clock cycles: %u clock cycles\n", (unsigned)arm_cycles);
         printf("-------------------------------\n");
         printf("Percent complete: %.2f%%\n", (t+1)*100.0f*ONE_OVER_IN_COLS);
         printf("Average speed: %.6f seconds/sample\n", secs*t_plus_one_reciprocol);

@@ -59,7 +59,7 @@
 
 // Node memory addresses
 #define NETWORK_ORIGIN_ROW  0
-#define NETWORK_ORIGIN_COL  1
+#define NETWORK_ORIGIN_COL  0
 #define XT_MEM_ADDR         0x4000
 #define WK_MEM_ADDR         0x4230
 #define UP_WK_MEM_ADDR      0x4460
@@ -73,7 +73,7 @@
 
 // Master node macros and addresses
 #define MASTER_NODE_ROW     0
-#define MASTER_NODE_COL     0
+#define MASTER_NODE_COL     3
 #define MASTER_ADDR_NUM     6		// The number of benchmark values returned by the master node
 #define INF_CLKS_MEM_ADDR   0x4000
 #define UP_CLKS_MEM_ADDR    0x4200

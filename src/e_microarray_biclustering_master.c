@@ -64,7 +64,7 @@ int main(void) {
             for (k = NETWORK_ORIGIN_COL; k < N + NETWORK_ORIGIN_COL; ++k) {
                 slave_core_addr = (unsigned)e_get_global_address_on_chip(j, k, p);
                 dest = (float *)(slave_core_addr + XT_MEM_ADDR);
-                e_dma_copy(dest, xt_k, WK_ROWS*sizeof(float));
+                e_memcopy(dest, xt_k, WK_ROWS*sizeof(float));
             }
         }
 
