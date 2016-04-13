@@ -16,12 +16,10 @@ int main(int argc, char *argv[]) {
 #ifdef USE_MASTER_NODE
     unsigned masternode_clks, all_done;
     int last_t;
-#elif defined USE_ARM
+#else
     unsigned inf_clks, up_clks, all_done;
     float xt[IN_ROWS];
     unsigned done[M_N], j;
-#else
-    int last_t;
 #endif
 
     clr = CLEAR_FLAG;
@@ -172,7 +170,7 @@ int main(int argc, char *argv[]) {
 
     e_close(&dev_master);
 
-#elif defined USE_ARM
+#else
     // Allocate shared memory
     if (e_alloc(&mbuf, SHM_OFFSET, 3*M_N*sizeof(unsigned)) != E_OK) {
         printf("Error: Failed to allocate shared memory\n");
@@ -242,63 +240,6 @@ int main(int argc, char *argv[]) {
         printf("Time elapsed: %.2f seconds\n", secs);
         printf("Total time: %.2f seconds\n", (secs/(t+1))*IN_COLS);
         printf("Remaining time: %.2f seconds\n\n", (secs/(t+1))*IN_COLS - secs);
-    }
-
-#else
-    // Allocate shared memory
-    if (e_alloc(&mbuf, SHM_OFFSET, IN_ROWS*IN_COLS*sizeof(float) + 3*M_N*sizeof(unsigned)) != E_OK) {
-        printf("Error: Failed to allocate shared memory\n");
-        return EXIT_FAILURE;
-    };
-
-    // Write input data to shared memory
-    e_write(&mbuf, 0, 0, 0x0, &input_data, IN_ROWS*IN_COLS*sizeof(float));
-
-    // Clear done flag in shared memory
-    for (i = 0; i < M_N; ++i) {
-        e_write(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float) + i*sizeof(unsigned), &clr, sizeof(unsigned));
-    }
-
-    printf("Network started...\n\n");
-
-    last_t = -1;
-
-    clock_t start = clock(), diff;
-
-    // Start workgroup
-    e_start_group(&dev);
-
-    while (1) {
-        e_read(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float), &t, sizeof(int));
-        e_read(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float) + M_N*sizeof(unsigned), &total_inf_clks, sizeof(unsigned));
-        e_read(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float) + 2*M_N*sizeof(unsigned), &total_up_clks, sizeof(unsigned));
-
-        if (t - last_t >= 1) {
-            avg_inf_clks = total_inf_clks;
-            avg_up_clks = total_up_clks;
-            last_t = t;
-            diff = clock() - start;
-            secs = diff / CLOCKS_PER_SEC;
-
-            printf("\nConfiguration: Autonomous - %i x %i\n", M, N);
-            printf("---------------------------------------\n");
-            printf("Processed input sample: %u\n", t);
-            printf("Node clock cycles for inference step: %u clock cycles\n", avg_inf_clks);
-            printf("Average network speed of inference step: %.6f seconds\n", avg_inf_clks * ONE_OVER_E_CYCLES);
-            printf("Average clock cycles for update step: %u clock cycles\n", avg_up_clks);
-            printf("Average network speed of update step: %.6f seconds\n", avg_up_clks * ONE_OVER_E_CYCLES);
-            printf("ARM clock cycles: %u clock cycles\n", (unsigned)diff);
-            printf("-------------------------------\n");
-            printf("Percent complete: %.2f%%\n", (t+1)*100.0f*ONE_OVER_IN_COLS);
-            printf("Average speed: %.2f seconds/sample\n", secs/(t+1));
-            printf("Time elapsed: %.2f seconds\n", secs);
-            printf("Total time estimate: %.2f seconds\n", (secs/(t+1))*IN_COLS);
-            printf("Remaining time estimate: %.2f seconds\n\n", (secs/(t+1))*IN_COLS - secs);
-        }
-
-        if (t == IN_COLS -1) {
-            break;
-        }
     }
 
 #endif

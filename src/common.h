@@ -5,15 +5,11 @@
 #include <string.h>
 
 // Configuration macros
-//#define USE_MASTER_NODE
-//#define USE_ARM
+#define USE_MASTER_NODE
 #define USE_DMA
 
 #ifdef USE_MASTER_NODE
 #define MASTER_NODE         1
-#ifdef USE_ARM
-#undefine USE_ARM
-#endif
 #else
 #define MASTER_NODE         0
 #endif
