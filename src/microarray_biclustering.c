@@ -192,12 +192,14 @@ int main(int argc, char *argv[]) {
 
     clock_t start = clock(), diff;
 
-    for (t = 0; t < IN_COLS; ++t) {
-        getColumn(IN_ROWS, IN_COLS, t, input_data, xt);
+    for (t = 0; t < IN_COLS; t+=M) {
+        for (j = 0; j < M; ++j) {
+            getColumn(IN_ROWS, IN_COLS, t+j, input_data, xt);
 
-        for (j = 0; j < N; ++j) {
-            e_write(&dev, 0, j, XT_MEM_ADDR, &xt, IN_ROWS*sizeof(float));   // "Stream" next data sample
-            e_write(&mbuf, 0, 0, j*sizeof(unsigned), &clr, sizeof(unsigned));  // Clear done flag
+            for (k = 0; k < N; ++k) {
+                e_write(&dev, j, k, XT_MEM_ADDR, &xt, IN_ROWS*sizeof(float));   // "Stream" next data sample
+                e_write(&mbuf, 0, 0, (j*N+k)*sizeof(unsigned), &clr, sizeof(unsigned));  // Clear done flag
+            }
         }
 
         // Start/wake workgroup
@@ -206,12 +208,12 @@ int main(int argc, char *argv[]) {
         while (1) {
             all_done = 0;
 
-            for (j = 0; j < N; ++j) {
+            for (j = 0; j < M_N; ++j) {
                 e_read(&mbuf, 0, 0, j*sizeof(unsigned), &done[j], sizeof(unsigned));
                 all_done += done[j];
             }
 
-            if (all_done == N) {
+            if (all_done == M_N) {
                 break;
             }
         }
@@ -219,7 +221,7 @@ int main(int argc, char *argv[]) {
         total_inf_clks = 0;
         total_up_clks = 0;
 
-        for (j = 0; j < N; ++j) {
+        for (j = 0; j < M_N; ++j) {
             e_read(&mbuf, 0, 0, j*sizeof(unsigned) + (M_N*sizeof(unsigned)), &inf_clks, sizeof(unsigned));
             total_inf_clks += inf_clks;
             e_read(&mbuf, 0, 0, j*sizeof(unsigned) + (2*M_N*sizeof(unsigned)), &up_clks, sizeof(unsigned));
