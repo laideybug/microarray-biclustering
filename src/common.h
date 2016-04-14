@@ -30,9 +30,10 @@
 #define IN_COLS			    12625
 #define ONE_OVER_IN_COLS    7.920792079e-5
 #define WK_ROWS			    56
-#define M 				    1
+#define M 				    4
 #define N 				    3
-#define M_N 				3
+#define M_N 				12
+#define ONE_OVER_M 		    0.25
 #define ONE_OVER_N 		    0.333333333
 #define ONE_OVER_M_N 		0.333333333
 #define PI 				    3.141592654
@@ -58,22 +59,28 @@
 #define SHMEM_ADDR          0x8f000000
 
 // Node memory addresses
+#define NETWORK_ORIGIN_ROW  0
+#define NETWORK_ORIGIN_COL  0
 #define XT_MEM_ADDR         0x4000
 #define WK_MEM_ADDR         0x4230
 #define UP_WK_MEM_ADDR      0x4460
-#define NU_OPT_MEM_ADDR     0x4690
-#define NU_K0_MEM_ADDR      0x4920
-#define NU_K1_MEM_ADDR      0x5150
-#define NU_K2_MEM_ADDR      0x5380
+#define NU_OPT_K0_MEM_ADDR  0x4690
+#define NU_OPT_K1_MEM_ADDR  0x4920
+#define NU_OPT_K2_MEM_ADDR  0x5150
+#define NU_OPT_K3_MEM_ADDR  0x5380
+#define NU_K0_MEM_ADDR      0x5610
+#define NU_K1_MEM_ADDR      0x5840
+#define NU_K2_MEM_ADDR      0x6070
 #define NU_MEM_OFFSET       0x0230
 
 // Master node macros and addresses
 #define MASTER_NODE_ROW     0
 #define MASTER_NODE_COL     3
-#define MASTER_ADDR_NUM     5
+#define MASTER_ADDR_NUM     6		// The number of benchmark values returned by the master node
 #define INF_CLKS_MEM_ADDR   0x4000
 #define UP_CLKS_MEM_ADDR    0x4200
 #define READY_MEM_ADDR      0x4400
 #define DONE_MEM_ADDR       0x4600
+#define DONE_MUTEX_MEM_ADDR 0x4800
 
 #endif // COMMON_H_INCLUDED

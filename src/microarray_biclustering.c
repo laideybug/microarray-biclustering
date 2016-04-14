@@ -9,7 +9,7 @@
 #define SHM_OFFSET 0x01000000
 
 int main(int argc, char *argv[]) {
-    unsigned current_row, current_col, i, avg_inf_clks, avg_up_clks, total_inf_clks, total_up_clks, clr;
+    unsigned current_row, current_col, i, j, k, avg_inf_clks, avg_up_clks, total_inf_clks, total_up_clks, clr;
     float input_data[IN_ROWS][IN_COLS], data_point, dictionary_w[IN_ROWS][N], update_wk[IN_ROWS], dual_var[IN_ROWS], secs;
     int t;
     char path[100] = "../data/data.txt";
@@ -19,7 +19,7 @@ int main(int argc, char *argv[]) {
 #else
     unsigned inf_clks, up_clks, all_done;
     float xt[IN_ROWS];
-    unsigned done[M_N], j;
+    unsigned done[M_N];
 #endif
 
     clr = CLEAR_FLAG;
@@ -84,16 +84,21 @@ int main(int argc, char *argv[]) {
     fillVector(IN_ROWS, dual_var, 0.0f);
 
     // Load the dictionary atoms into each core
-    for (i = 0; i < N; ++i) {
-        float dictionary_wk[IN_ROWS];
-        getColumn(IN_ROWS, N, i, dictionary_w, dictionary_wk);
+    for (j = 0; j < M; ++j) {
+        for (k = 0; k < N; ++k) {
+            float dictionary_wk[IN_ROWS];
+            getColumn(IN_ROWS, N, k, dictionary_w, dictionary_wk);
 
-        e_write(&dev, 0, i, WK_MEM_ADDR, &dictionary_wk, IN_ROWS*sizeof(float));
-        e_write(&dev, 0, i, UP_WK_MEM_ADDR, &update_wk, IN_ROWS*sizeof(float));
-        e_write(&dev, 0, i, NU_OPT_MEM_ADDR, &dual_var, IN_ROWS*sizeof(float));
-        e_write(&dev, 0, i, NU_K0_MEM_ADDR, &dual_var, IN_ROWS*sizeof(float));
-        e_write(&dev, 0, i, NU_K1_MEM_ADDR, &dual_var, IN_ROWS*sizeof(float));
-        e_write(&dev, 0, i, NU_K2_MEM_ADDR, &dual_var, IN_ROWS*sizeof(float));
+            e_write(&dev, j, k, WK_MEM_ADDR, &dictionary_wk, WK_ROWS*sizeof(float));
+            e_write(&dev, j, k, UP_WK_MEM_ADDR, &update_wk, WK_ROWS*sizeof(float));
+            e_write(&dev, j, k, NU_OPT_K0_MEM_ADDR, &dual_var, WK_ROWS*sizeof(float));
+            e_write(&dev, j, k, NU_OPT_K1_MEM_ADDR, &dual_var, WK_ROWS*sizeof(float));
+            e_write(&dev, j, k, NU_OPT_K2_MEM_ADDR, &dual_var, WK_ROWS*sizeof(float));
+            e_write(&dev, j, k, NU_OPT_K3_MEM_ADDR, &dual_var, WK_ROWS*sizeof(float));
+            e_write(&dev, j, k, NU_K0_MEM_ADDR, &dual_var, WK_ROWS*sizeof(float));
+            e_write(&dev, j, k, NU_K1_MEM_ADDR, &dual_var, WK_ROWS*sizeof(float));
+            e_write(&dev, j, k, NU_K2_MEM_ADDR, &dual_var, WK_ROWS*sizeof(float));
+        }
     }
 
      // Load program to the workgroup but do not run yet
