@@ -9,17 +9,17 @@
 #define SHM_OFFSET 0x01000000
 
 int main(int argc, char *argv[]) {
-    unsigned current_row, current_col, i, j, k, avg_inf_clks, avg_up_clks, total_inf_clks, total_up_clks, clr;
-    float input_data[IN_ROWS][IN_COLS], data_point, dictionary_w[IN_ROWS][N], update_wk[IN_ROWS], dual_var[IN_ROWS], secs;
+    unsigned current_row, current_col, j, k, avg_inf_clks, avg_up_clks, total_inf_clks, total_up_clks, clr;
+    float input_data[IN_ROWS][IN_COLS], dictionary_w[IN_ROWS][N], update_wk[IN_ROWS], dual_var[IN_ROWS], data_point, secs;
     int t;
     char path[100] = "../data/data.txt";
 #ifdef USE_MASTER_NODE
     unsigned masternode_clks, all_done;
-    int last_t;
+    int previous_t;
 #else
-    unsigned inf_clks, up_clks, all_done;
+    unsigned done[M_N], inf_clks, up_clks, all_done;
     float xt[IN_ROWS];
-    unsigned done[M_N];
+    int last_sample;
 #endif
 
     clr = CLEAR_FLAG;
@@ -190,11 +190,14 @@ int main(int argc, char *argv[]) {
 
     printf("Network started...\n\n");
 
+    last_sample = 0;
     clock_t start = clock(), diff;
 
     for (t = 0; t < IN_COLS; t+=M) {
+        if (IN_COLS - t == 1) last_sample = 0;
+
         for (j = 0; j < M; ++j) {
-            getColumn(IN_ROWS, IN_COLS, t+j, input_data, xt);
+            getColumn(IN_ROWS, IN_COLS, t+j*last_sample, input_data, xt);
 
             for (k = 0; k < N; ++k) {
                 e_write(&dev, j, k, XT_MEM_ADDR, &xt, IN_ROWS*sizeof(float));   // "Stream" next data sample

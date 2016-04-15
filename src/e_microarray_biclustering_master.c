@@ -5,7 +5,7 @@
 void sync_isr(int x);
 
 int main(void) {
-	unsigned *all_done_flag, *total_inf_clks, *total_up_clks, *section_clks, *slave_ready_flag, *slave_done_counter, *slave_inf_clks, *slave_up_clks, *masternode_clks, *p, slave_core_addr, i, j, k, all_ready, inf_clks, up_clks;
+	unsigned *all_done_flag, *total_inf_clks, *total_up_clks, *section_clks, *slave_ready_flag, *slave_done_counter, *slave_inf_clks, *slave_up_clks, *masternode_clks, *p, slave_core_addr, t, j, k, all_ready, inf_clks, up_clks;
 	float *xt, *dest;
 	int *sample_no, last_sample;
 	e_mutex_t *mutex;
@@ -39,8 +39,8 @@ int main(void) {
     while (1) {
         all_ready = 0;
 
-        for (i = 0; i < M_N; ++i) {
-            slave_ready_flag = (unsigned *)(READY_MEM_ADDR + i*sizeof(unsigned));
+        for (j = 0; j < M_N; ++j) {
+            slave_ready_flag = (unsigned *)(READY_MEM_ADDR + j*sizeof(unsigned));
             all_ready += *slave_ready_flag;
         }
 
@@ -49,14 +49,14 @@ int main(void) {
         }
     }
 
-	for (i = 0; i < IN_COLS; i+=M) {
+	for (t = 0; t < IN_COLS; t+=M) {
         e_ctimer_set(E_CTIMER_0, E_CTIMER_MAX);
         e_ctimer_start(E_CTIMER_0, E_CTIMER_CLK);
 
-        if (IN_COLS - i == 1) last_sample = 0;
+        if (IN_COLS - t == 1) last_sample = 0;
 
         for (j = NETWORK_ORIGIN_ROW; j < M + NETWORK_ORIGIN_ROW; ++j) {
-            xt = (float *)(SHMEM_ADDR + (i+j*last_sample)*IN_ROWS*sizeof(float));
+            xt = (float *)(SHMEM_ADDR + (t+j*last_sample)*IN_ROWS*sizeof(float));
 
             for (k = NETWORK_ORIGIN_COL; k < N + NETWORK_ORIGIN_COL; ++k) {
                 slave_core_addr = (unsigned)e_get_global_address_on_chip(j, k, p);
@@ -90,7 +90,7 @@ int main(void) {
         }
 
         // Write benchmark results
-        (*(sample_no)) = i;
+        (*(sample_no)) = t;
         (*(total_inf_clks)) = inf_clks;
         (*(total_up_clks)) = up_clks;
         (*(masternode_clks)) = E_CTIMER_MAX - e_ctimer_stop(E_CTIMER_0);
