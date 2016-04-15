@@ -1,9 +1,6 @@
 #ifndef COMMON_H_INCLUDED
 #define COMMON_H_INCLUDED
 
-#include <stdlib.h>
-#include <string.h>
-
 // Configuration macros
 //#define USE_MASTER_NODE
 #define USE_DMA
@@ -20,10 +17,6 @@
 #define e_memcopy(dst, src, size) memcpy(dst, src, size)
 #endif
 
-// Platform constants
-#define PLATFORM_ROW        32
-#define PLATFORM_COL        8
-
 // Program constants
 #define IN_ROWS			    56
 #define ONE_OVER_IN_ROWS    0.017857143
@@ -36,7 +29,6 @@
 #define ONE_OVER_M 		    0.25
 #define ONE_OVER_N 		    0.333333333
 #define ONE_OVER_M_N 		0.333333333
-#define PI 				    3.141592654
 #define MU_W 			    0.005
 #define GAMMA 			    0.5
 #define DELTA 			    0.1

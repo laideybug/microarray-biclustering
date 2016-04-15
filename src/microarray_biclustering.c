@@ -4,7 +4,7 @@
 #include <time.h>
 #include <unistd.h>
 #include "common.h"
-#include "microarray_biclustering_utils.h"
+#include "mb_utils.h"
 
 #define SHM_OFFSET 0x01000000
 
@@ -57,9 +57,9 @@ int main(int argc, char *argv[]) {
     }
 
     // Remove DC component from input data (i.e. centering)
-    removeDC(IN_ROWS, IN_COLS, input_data);
+    mb_remove_dc(IN_ROWS, IN_COLS, input_data);
     // Initialise the dictionaries
-    initDictionary(IN_ROWS, N, dictionary_w);
+    mb_init_dictionary(IN_ROWS, N, dictionary_w);
 
     printf("Initialising network...\n");
 
@@ -80,14 +80,14 @@ int main(int argc, char *argv[]) {
     e_reset_group(&dev);
 
     // Initialise update dictionary and dual variable vectors with 0
-    fillVector(IN_ROWS, update_wk, 0.0f);
-    fillVector(IN_ROWS, dual_var, 0.0f);
+    mb_fill_vector(IN_ROWS, update_wk, 0.0f);
+    mb_fill_vector(IN_ROWS, dual_var, 0.0f);
 
     // Load the dictionary atoms into each core
     for (j = 0; j < M; ++j) {
         for (k = 0; k < N; ++k) {
             float dictionary_wk[IN_ROWS];
-            getColumn(IN_ROWS, N, k, dictionary_w, dictionary_wk);
+            mb_get_column(IN_ROWS, N, k, dictionary_w, dictionary_wk);
 
             e_write(&dev, j, k, WK_MEM_ADDR, &dictionary_wk, WK_ROWS*sizeof(float));
             e_write(&dev, j, k, UP_WK_MEM_ADDR, &update_wk, WK_ROWS*sizeof(float));
@@ -190,14 +190,14 @@ int main(int argc, char *argv[]) {
 
     printf("Network started...\n\n");
 
-    last_sample = 0;
+    last_sample = 1;
     clock_t start = clock(), diff;
 
     for (t = 0; t < IN_COLS; t+=M) {
         if (IN_COLS - t == 1) last_sample = 0;
 
         for (j = 0; j < M; ++j) {
-            getColumn(IN_ROWS, IN_COLS, t+j*last_sample, input_data, xt);
+            mb_get_column(IN_ROWS, IN_COLS, t+j*last_sample, input_data, xt);
 
             for (k = 0; k < N; ++k) {
                 e_write(&dev, j, k, XT_MEM_ADDR, &xt, IN_ROWS*sizeof(float));   // "Stream" next data sample
@@ -255,6 +255,7 @@ int main(int argc, char *argv[]) {
 #endif
 
     printf("Done.");
+
     e_close(&dev);
     e_free(&mbuf);
     e_finalize();

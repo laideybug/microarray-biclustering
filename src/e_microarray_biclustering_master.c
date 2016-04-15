@@ -1,6 +1,7 @@
 #include <e-lib.h>
+#include <stdlib.h>
 #include "common.h"
-#include "e_microarray_biclustering_utils.h"
+#include "e_lib_extended.h"
 
 void sync_isr(int x);
 
@@ -22,7 +23,7 @@ int main(void) {
     p = CLEAR_FLAG;
     last_sample = 1;
 
-    e_global_mutex_init(MASTER_NODE_ROW, MASTER_NODE_COL, mutex, NULL);
+    _e_global_mutex_init(MASTER_NODE_ROW, MASTER_NODE_COL, mutex, NULL);
 
     // Initialise benchmark results
     (*(all_done_flag)) = 0;
@@ -59,7 +60,7 @@ int main(void) {
             xt = (float *)(SHMEM_ADDR + (t+j*last_sample)*IN_ROWS*sizeof(float));
 
             for (k = NETWORK_ORIGIN_COL; k < N + NETWORK_ORIGIN_COL; ++k) {
-                slave_core_addr = (unsigned)e_get_global_address_on_chip(j, k, p);
+                slave_core_addr = (unsigned)_e_get_global_address_on_chip(j, k, p);
                 dest = (float *)(slave_core_addr + XT_MEM_ADDR);
                 e_memcopy(dest, xt, WK_ROWS*sizeof(float));
             }
@@ -69,7 +70,7 @@ int main(void) {
 
         for (j = NETWORK_ORIGIN_ROW; j < M + NETWORK_ORIGIN_ROW; ++j) {
             for (k = NETWORK_ORIGIN_COL; k < N + NETWORK_ORIGIN_COL; ++k) {
-                e_global_address_irq_set(j, k, E_SYNC);
+                _e_global_address_irq_set(j, k, E_SYNC);
             }
         }
 
