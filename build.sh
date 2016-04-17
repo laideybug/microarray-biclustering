@@ -37,10 +37,6 @@ ${CROSS_PREFIX}gcc -Wall -std=c99 -Os -c mb-utils/*.c ${INCS}
 ar cr libmb-utils.a *.o
 rm -rf *.o
 
-${CROSS_PREFIX}gcc -O3 -c gnuplot-i/*.c ${INCS}
-ar cr libgnuplot-i.a *.o
-rm -rf *.o
-
 e-gcc -Wall -std=c99 -Os -c e-lib-extended/*.c ${INCS}
 ar cr libe-lib-extended.a *.o
 rm -rf *.o
@@ -48,7 +44,7 @@ rm -rf *.o
 cd ..
 
 # Build HOST side application
-${CROSS_PREFIX}gcc -Wall -std=c99 -O3 src/microarray_biclustering.c -o bin/microarray_biclustering.elf ${EINCS} ${ELIBS} ${INCS} ${LIBS} -le-hal -le-loader -lmb-utils -lgnuplot-i -lm
+${CROSS_PREFIX}gcc -Wall -std=c99 -O3 src/microarray_biclustering.c -o bin/microarray_biclustering.elf ${EINCS} ${ELIBS} ${INCS} ${LIBS} -le-hal -le-loader -lmb-utils -lm
 
 # Build agent DEVICE side programs
 e-gcc ${CFLAGS} -T ${ELDF} src/e_mb.c src/e_synch.c -o bin/e_mb.elf ${INCS} ${LIBS} -le-lib -le-lib-extended -lm

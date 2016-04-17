@@ -268,6 +268,9 @@ int main(int argc, char *argv[]) {
 #endif
 
     printf("Done.");
+
+    // Output data to .dat file here
+
     e_close(&dev);
     e_free(&mbuf);
     e_finalize();
