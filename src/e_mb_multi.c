@@ -1,5 +1,6 @@
 #include <e-lib.h>
 #include <math.h>
+#include <stdlib.h>
 #include <string.h>
 #include "_e_lib_extended.h"
 #include "common.h"
@@ -23,13 +24,13 @@ int main(void) {
 	nu_k0 = (float *)NU_K0_MEM_ADDR;	    // Address of node 0 dual variable estimate (WK_ROWS x 1)
 	nu_k1 = (float *)NU_K1_MEM_ADDR;        // Address of node 1 dual variable estimate (WK_ROWS x 1)
 	nu_k2 = (float *)NU_K2_MEM_ADDR;        // Address of node 2 dual variable estimate (WK_ROWS x 1)
-    nu_opt = (float *)NU_OPT_MEM_ADDR;      // Address of optimal dual variable (WK_ROWS x 1)
+    nu_opt = (float *)NU_OPT_K0_MEM_ADDR;   // Address of optimal dual variable (WK_ROWS x 1)
 
     p = CLEAR_FLAG;
     out_mem_offset = (unsigned)((e_group_config.core_row * e_group_config.group_cols + e_group_config.core_col)*sizeof(unsigned));
 
 #ifdef USE_MASTER_NODE
-    master_node_addr = (unsigned)e_get_global_address_on_chip(MASTER_NODE_ROW, MASTER_NODE_COL, p);
+    master_node_addr = (unsigned)_e_get_global_address_on_chip(MASTER_NODE_ROW, MASTER_NODE_COL, p);
 	ready_flag = (unsigned *)(master_node_addr + READY_MEM_ADDR + out_mem_offset);
 	inf_clks = (unsigned *)(master_node_addr + INF_CLKS_MEM_ADDR + out_mem_offset);
     up_clks = (unsigned *)(master_node_addr + UP_CLKS_MEM_ADDR + out_mem_offset);
@@ -224,7 +225,7 @@ int main(void) {
 
 #ifdef USE_MASTER_NODE
         // Aqcuire the mutex lock
-		e_global_mutex_lock(MASTER_NODE_ROW, MASTER_NODE_COL, mutex);
+		_e_global_mutex_lock(MASTER_NODE_ROW, MASTER_NODE_COL, mutex);
         // Write benchmark values
 		(*(inf_clks)) = timer_value_0;
 		(*(up_clks)) = timer_value_1;
@@ -234,11 +235,11 @@ int main(void) {
 	   	(*(done_flag)) = done_flag_counter;
 
 	   	// Release the mutex lock
-	   	e_global_mutex_unlock(MASTER_NODE_ROW, MASTER_NODE_COL, mutex);
+	   	_e_global_mutex_unlock(MASTER_NODE_ROW, MASTER_NODE_COL, mutex);
 
         // The last node to update sends an interrupt to master node
 	   	if (done_flag_counter == M_N) {
-            e_global_address_irq_set(MASTER_NODE_ROW, MASTER_NODE_COL, E_SYNC);
+            _e_global_address_irq_set(MASTER_NODE_ROW, MASTER_NODE_COL, E_SYNC);
 	   	}
 #else
         // Write benchmark values

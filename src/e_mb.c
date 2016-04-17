@@ -1,5 +1,6 @@
 #include <e-lib.h>
 #include <math.h>
+#include <stdlib.h>
 #include <string.h>
 #include "_e_lib_extended.h"
 #include "common.h"
@@ -176,7 +177,7 @@ int main(void) {
         (*(done_flag)) = SET_FLAG;
         // Put core in idle state
         __asm__ __volatile__("idle");
-        
+
 #endif
 	}
 

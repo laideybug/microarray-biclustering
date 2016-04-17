@@ -1,3 +1,4 @@
+#include <math.h>
 #include "mb_utils.h"
 
 void mb_square(size_t rows, size_t cols, float matrix[rows][cols]) {

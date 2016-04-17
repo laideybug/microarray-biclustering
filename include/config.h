@@ -2,17 +2,21 @@
 #define CONFIG_H_INCLUDED
 
 /*==============================================*/
-/*===========Configuration Constants============*/
+/*=============Configuration Modes==============*/
 /*==============================================*/
 
 // Algorithm modes - CHOOSE ONE, comment out the rest
-#define DISTRIBUTED
-#define BATCH_DISTRIBUTED
+//#define DISTRIBUTED
+//#define BATCH_DISTRIBUTED
 #define MULTI_DISTRIBUTED
 
 // Network configuration options - comment out as needed
 #define USE_MASTER_NODE
 //#define USE_DMA
+
+/*==============================================*/
+/*===========Configuration Constants============*/
+/*==============================================*/
 
 // Network coordinates - do not change
 #define NETWORK_ORIGIN_ROW  0
@@ -52,7 +56,7 @@
 #define ONE_OVER_M 		    0.25
 #define ONE_OVER_N 		    0.333333333
 #define ONE_OVER_M_N 		0.083333333
-#define BATCH_STARTS		1
+#define BATCH_STARTS		4
 #define BATCH_TOGGLE		1
 #define AGENT_BIN_PATH		"e_mb_batch.srec"
 #define MASTER_BIN_PATH		"e_mb_batch_master.srec"
@@ -67,7 +71,7 @@
 #define ONE_OVER_M 		    0.25
 #define ONE_OVER_N 		    0.333333333
 #define ONE_OVER_M_N 		0.083333333
-#define BATCH_STARTS		4
+#define BATCH_STARTS		1
 #define BATCH_TOGGLE		0
 #define AGENT_BIN_PATH		"e_mb_multi.srec"
 #define MASTER_BIN_PATH		"e_mb_multi_master.srec"

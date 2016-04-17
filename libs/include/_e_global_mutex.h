@@ -1,10 +1,6 @@
 #ifndef _E_GLOBAL_MUTEX_H_INCLUDED
 #define _E_GLOBAL_MUTEX_H_INCLUDED
 
-#include "_e_get_global_address_on_chip.h"
-#include "e_coreid.h"
-#include "e_types.h"
-
 typedef int  e_mutex_t;
 typedef int  e_mutexattr_t;
 

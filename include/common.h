@@ -1,6 +1,7 @@
 #ifndef COMMON_H_INCLUDED
 #define COMMON_H_INCLUDED
 
+#include <string.h>
 #include "config.h"
 
 /*==============================================*/
@@ -34,6 +35,8 @@
 #define XT_MEM_ADDR         0x4000
 #define WK_MEM_ADDR         0x4230
 #define UP_WK_MEM_ADDR      0x4460
+#define INC_SCAL_MEM_ADDR   0x4686
+#define INC_RMS_MEM_ADDR    0x4688
 #define NU_K0_MEM_ADDR  	0x4690
 #define NU_K1_MEM_ADDR  	0x4920
 #define NU_K2_MEM_ADDR  	0x5150

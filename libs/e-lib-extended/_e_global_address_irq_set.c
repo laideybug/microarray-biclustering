@@ -1,4 +1,6 @@
 #include "_e_global_address_irq_set.h"
+#include "_e_get_global_address_on_chip.h"
+#include "e_types.h"
 
 inline void _e_global_address_irq_set(unsigned row, unsigned col, e_irq_type_t irq) {
     unsigned *ilatst;

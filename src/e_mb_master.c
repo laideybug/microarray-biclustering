@@ -6,7 +6,7 @@
 void sync_isr(int x);
 
 int main(void) {
-	unsigned *all_done_flag, *total_inf_clks, *total_up_clks, *section_clks, *slave_ready_flag, *slave_done_flag, *slave_inf_clks, *slave_up_clks, *masternode_clks, *p, slave_core_addr, t, j, k, all_ready, all_done, inf_clks, up_clks, timer_value_0, timer_value_1;
+	unsigned *all_done_flag, *total_inf_clks, *total_up_clks, *section_clks, *slave_ready_flag, *slave_done_counter, *slave_inf_clks, *slave_up_clks, *masternode_clks, *p, slave_core_addr, t, j, k, all_ready, inf_clks, up_clks, timer_value_0, timer_value_1;
 	float *xt, *dest;
 	int *sample_no;
     e_mutex_t *mutex;
