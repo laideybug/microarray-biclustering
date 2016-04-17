@@ -70,7 +70,7 @@
 #define BATCH_STARTS		4
 #define BATCH_TOGGLE		0
 #define AGENT_BIN_PATH		"e_mb_multi.srec"
-#define MASTER_BIN_PATH		"e_mb_master.srec"
+#define MASTER_BIN_PATH		"e_mb_multi_master.srec"
 #endif
 
 #ifdef 	USE_MASTER_NODE
