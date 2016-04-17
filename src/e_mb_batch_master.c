@@ -1,7 +1,7 @@
 #include <e-lib.h>
 #include <stdlib.h>
+#include "_e_lib_extended.h"
 #include "common.h"
-#include "e_lib_extended.h"
 
 void sync_isr(int x);
 

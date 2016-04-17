@@ -2,8 +2,8 @@
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
+#include "_e_lib_extended.h"
 #include "common.h"
-#include "e_lib_extended.h"
 #include "e_synch.h"
 
 void adjustScaling(float scaling);
@@ -21,13 +21,13 @@ int main(void) {
 	xt = (float *)XT_MEM_ADDR;	            // Address of xt (WK_ROWS x 1)
 	wk = (float *)WK_MEM_ADDR;	            // Address of dictionary atom (WK_ROWS x 1)
 	update_wk = (float *)UP_WK_MEM_ADDR;	// Address of update atom (WK_ROWS x 1)
+	nu_k0 = (float *)NU_K0_MEM_ADDR;	    // Address of node 0 dual variable estimate (WK_ROWS x 1)
+	nu_k1 = (float *)NU_K1_MEM_ADDR;        // Address of node 1 dual variable estimate (WK_ROWS x 1)
+	nu_k2 = (float *)NU_K2_MEM_ADDR;        // Address of node 2 dual variable estimate (WK_ROWS x 1)
 	nu_opt_k0 = (float *)NU_OPT_K0_MEM_ADDR;// Address of optimal dual variable (WK_ROWS x 1)
 	nu_opt_k1 = (float *)NU_OPT_K1_MEM_ADDR;// Address of optimal dual variable (WK_ROWS x 1)
 	nu_opt_k2 = (float *)NU_OPT_K2_MEM_ADDR;// Address of optimal dual variable (WK_ROWS x 1)
 	nu_opt_k3 = (float *)NU_OPT_K3_MEM_ADDR;// Address of optimal dual variable (WK_ROWS x 1)
-	nu_k0 = (float *)NU_K0_MEM_ADDR;	    // Address of node 0 dual variable estimate (WK_ROWS x 1)
-	nu_k1 = (float *)NU_K1_MEM_ADDR;        // Address of node 1 dual variable estimate (WK_ROWS x 1)
-	nu_k2 = (float *)NU_K2_MEM_ADDR;        // Address of node 2 dual variable estimate (WK_ROWS x 1)
 
     p = CLEAR_FLAG;
     out_mem_offset = (unsigned)((e_group_config.core_row * e_group_config.group_cols + e_group_config.core_col)*sizeof(unsigned));
@@ -50,6 +50,7 @@ int main(void) {
     nu_opt = (float *)(NU_OPT_K0_MEM_ADDR + (e_group_config.core_row * NU_MEM_OFFSET));
     // Address of this cores dual variable estimate
     nu_k = (float *)(NU_K0_MEM_ADDR + (e_group_config.core_col * NU_MEM_OFFSET));
+    
     // Re-enable interrupts
     e_irq_attach(E_SYNC, sync_isr);
     e_irq_mask(E_SYNC, E_FALSE);

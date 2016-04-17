@@ -39,8 +39,8 @@
 #define ONE_OVER_M_N 		0.333333333
 #define BATCH_STARTS		1
 #define BATCH_TOGGLE		0
-#define AGENT_BIN_PATH		"e_microarray_biclustering.srec"
-#define MASTER_BIN_PATH		"e_microarray_biclustering_master.srec"
+#define AGENT_BIN_PATH		"e_mb.srec"
+#define MASTER_BIN_PATH		"e_mb_master.srec"
 
 #elif 	defined BATCH_DISTRIBUTED
 #undef	DISTRIBUTED
@@ -54,8 +54,8 @@
 #define ONE_OVER_M_N 		0.083333333
 #define BATCH_STARTS		1
 #define BATCH_TOGGLE		1
-#define AGENT_BIN_PATH		"e_microarray_biclustering_batch.srec"
-#define MASTER_BIN_PATH		"e_microarray_biclustering_batch_master.srec"
+#define AGENT_BIN_PATH		"e_mb_batch.srec"
+#define MASTER_BIN_PATH		"e_mb_batch_master.srec"
 
 #elif 	defined MULTI_DISTRIBUTED
 #undef	DISTRIBUTED
@@ -69,8 +69,8 @@
 #define ONE_OVER_M_N 		0.083333333
 #define BATCH_STARTS		4
 #define BATCH_TOGGLE		0
-#define AGENT_BIN_PATH		"e_microarray_biclustering_multi.srec"
-#define MASTER_BIN_PATH		"e_microarray_biclustering_multi_master.srec"
+#define AGENT_BIN_PATH		"e_mb_multi.srec"
+#define MASTER_BIN_PATH		"e_mb_multi_master.srec"
 #endif
 
 #ifdef 	USE_MASTER_NODE
