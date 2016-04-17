@@ -2,13 +2,17 @@
 
 set -e
 
+SCRIPT=$(readlink -f "$0")
+EXEPATH=$(dirname "$SCRIPT")
+
+LIBS="-L ${EXEPATH}/libs"
+INCS="-I ${EXEPATH}/libs/include -I ${EXEPATH}/include"
+
 ESDK=${EPIPHANY_HOME}
 ELIBS="-L ${ESDK}/tools/host/lib"
 EINCS="-I ${ESDK}/tools/host/include"
 ELDF=${ESDK}/bsps/current/internal.ldf
 
-SCRIPT=$(readlink -f "$0")
-EXEPATH=$(dirname "$SCRIPT")
 cd $EXEPATH
 
 mkdir -p bin
