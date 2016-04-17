@@ -1,8 +1,8 @@
 #include <e-lib.h>
 #include <math.h>
 #include <string.h>
+#include "_e_lib_extended.h"
 #include "common.h"
-#include "e_microarray_biclustering_utils.h"
 #include "e_synch.h"
 
 void adjustScaling(float scaling);
@@ -20,10 +20,10 @@ int main(void) {
 	xt = (float *)XT_MEM_ADDR;	            // Address of xt (WK_ROWS x 1)
 	wk = (float *)WK_MEM_ADDR;	            // Address of dictionary atom (WK_ROWS x 1)
 	update_wk = (float *)UP_WK_MEM_ADDR;	// Address of update atom (WK_ROWS x 1)
-	nu_opt = (float *)NU_OPT_MEM_ADDR;      // Address of optimal dual variable (WK_ROWS x 1)
 	nu_k0 = (float *)NU_K0_MEM_ADDR;	    // Address of node 0 dual variable estimate (WK_ROWS x 1)
 	nu_k1 = (float *)NU_K1_MEM_ADDR;        // Address of node 1 dual variable estimate (WK_ROWS x 1)
 	nu_k2 = (float *)NU_K2_MEM_ADDR;        // Address of node 2 dual variable estimate (WK_ROWS x 1)
+    nu_opt = (float *)NU_OPT_MEM_ADDR;      // Address of optimal dual variable (WK_ROWS x 1)
 
     p = CLEAR_FLAG;
     out_mem_offset = (unsigned)((e_group_config.core_row * e_group_config.group_cols + e_group_config.core_col)*sizeof(unsigned));

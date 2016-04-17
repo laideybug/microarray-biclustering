@@ -1,12 +1,12 @@
 #include <e-lib.h>
 #include <stdlib.h>
+#include "_e_lib_extended.h"
 #include "common.h"
-#include "e_microarray_biclustering_utils.h"
 
 void sync_isr(int x);
 
 int main(void) {
-	unsigned *all_done_flag, *total_inf_clks, *total_up_clks, *section_clks, *slave_ready_flag, *slave_done_counter, *slave_inf_clks, *slave_up_clks, *masternode_clks, *p, slave_core_addr, i, j, k, all_ready, inf_clks, up_clks, timer_value_0, timer_value_1;
+	unsigned *all_done_flag, *total_inf_clks, *total_up_clks, *section_clks, *slave_ready_flag, *slave_done_counter, *slave_inf_clks, *slave_up_clks, *masternode_clks, *p, slave_core_addr, t, j, k, all_ready, inf_clks, up_clks, timer_value_0, timer_value_1;
 	float *xt, *dest, xt_k[WK_ROWS];
 	int *sample_no;
 	e_mutex_t *mutex;
@@ -40,8 +40,8 @@ int main(void) {
     while (1) {
         all_ready = 0;
 
-        for (i = 0; i < M_N; ++i) {
-            slave_ready_flag = (unsigned *)(READY_MEM_ADDR + i*sizeof(unsigned));
+        for (j = 0; j < M_N; ++j) {
+            slave_ready_flag = (unsigned *)(READY_MEM_ADDR + j*sizeof(unsigned));
             all_ready += *slave_ready_flag;
         }
 
@@ -50,11 +50,11 @@ int main(void) {
         }
     }
 
-	for (i = 0; i < IN_COLS; ++i) {
+	for (t = 0; t < IN_COLS; ++t) {
         e_ctimer_set(E_CTIMER_0, E_CTIMER_MAX);
         e_ctimer_start(E_CTIMER_0, E_CTIMER_CLK);
 
-		xt = (float *)(SHMEM_ADDR + i*IN_ROWS*sizeof(float));
+		xt = (float *)(SHMEM_ADDR + t*IN_ROWS*sizeof(float));
 
         for (j = NETWORK_ORIGIN_ROW; j < M + NETWORK_ORIGIN_ROW; ++j) {
             for (k = 0; k < WK_ROWS; ++k) {
