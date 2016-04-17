@@ -6,9 +6,9 @@
 void sync_isr(int x);
 
 int main(void) {
-	unsigned *all_done_flag, *total_inf_clks, *total_up_clks, *section_clks, *slave_ready_flag, *slave_done_counter, *slave_inf_clks, *slave_up_clks, *masternode_clks, *p, slave_core_addr, t, j, k, all_ready, inf_clks, up_clks;
+	unsigned *all_done_flag, *total_inf_clks, *total_up_clks, *section_clks, *slave_ready_flag, *slave_done_counter, *slave_inf_clks, *slave_up_clks, *masternode_clks, *p, slave_core_addr, t, j, k, all_ready, inf_clks, up_clks, timer_value_0, timer_value_1;
 	float *xt, *dest;
-	int *sample_no, last_sample;
+	int *sample_no, batch_toggle;
 	e_mutex_t *mutex;
 
 	all_done_flag = (unsigned *)(SHMEM_ADDR + IN_ROWS*IN_COLS*sizeof(float));
@@ -21,7 +21,7 @@ int main(void) {
     slave_done_counter = (unsigned *)DONE_MEM_ADDR;
     mutex = (int *)DONE_MUTEX_MEM_ADDR;
     p = CLEAR_FLAG;
-    last_sample = 1;
+    batch_toggle = BATCH_TOGGLE;
 
     _e_global_mutex_init(MASTER_NODE_ROW, MASTER_NODE_COL, mutex, NULL);
 
@@ -50,14 +50,14 @@ int main(void) {
         }
     }
 
-	for (t = 0; t < IN_COLS; t+=M) {
+	for (t = 0; t < IN_COLS; t+=BATCH_STARTS) {
         e_ctimer_set(E_CTIMER_0, E_CTIMER_MAX);
         e_ctimer_start(E_CTIMER_0, E_CTIMER_CLK);
 
-        if (IN_COLS - t == 1) last_sample = 0;
+        if (IN_COLS - t == 1) batch_toggle = 0;
 
         for (j = NETWORK_ORIGIN_ROW; j < M + NETWORK_ORIGIN_ROW; ++j) {
-            xt = (float *)(SHMEM_ADDR + (t+j*last_sample)*IN_ROWS*sizeof(float));
+            xt = (float *)(SHMEM_ADDR + (t+j*batch_toggle)*IN_ROWS*sizeof(float));
 
             for (k = NETWORK_ORIGIN_COL; k < N + NETWORK_ORIGIN_COL; ++k) {
                 slave_core_addr = (unsigned)_e_get_global_address_on_chip(j, k, p);
@@ -74,8 +74,13 @@ int main(void) {
             }
         }
 
+        e_ctimer_set(E_CTIMER_1, E_CTIMER_MAX);
+        e_ctimer_start(E_CTIMER_1, E_CTIMER_CLK);
+
 		// Put core in idle state while waiting for signal from network
         __asm__ __volatile__("idle");
+
+        timer_value_1 = E_CTIMER_MAX - e_ctimer_stop(E_CTIMER_1);
 
         inf_clks = 0;
         up_clks = 0;
@@ -90,11 +95,14 @@ int main(void) {
             *slave_up_clks = 0;
         }
 
+        timer_value_0 = E_CTIMER_MAX - e_ctimer_stop(E_CTIMER_0);
+
         // Write benchmark results
         (*(sample_no)) = t;
         (*(total_inf_clks)) = inf_clks;
         (*(total_up_clks)) = up_clks;
-        (*(masternode_clks)) = E_CTIMER_MAX - e_ctimer_stop(E_CTIMER_0);
+        (*(masternode_clks)) = timer_value_0;
+        (*(section_clks)) = timer_value_1;
 	}
 
 	// Raising "done" flag for host
