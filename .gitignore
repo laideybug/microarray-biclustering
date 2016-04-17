@@ -5,4 +5,7 @@
 *.elf
 *.srec
 
+*.o
+*.a
+
 bin/

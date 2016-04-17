@@ -22,7 +22,7 @@ int main(void) {
     mutex = (int *)DONE_MUTEX_MEM_ADDR;
     p = CLEAR_FLAG;
 
-    e_global_mutex_init(MASTER_NODE_ROW, MASTER_NODE_COL, mutex, NULL);
+    _e_global_mutex_init(MASTER_NODE_ROW, MASTER_NODE_COL, mutex, NULL);
 
     // Initialise benchmark results
     (*(all_done_flag)) = 0;
@@ -62,7 +62,7 @@ int main(void) {
             }
 
             for (k = NETWORK_ORIGIN_COL; k < N + NETWORK_ORIGIN_COL; ++k) {
-                slave_core_addr = (unsigned)e_get_global_address_on_chip(j, k, p);
+                slave_core_addr = (unsigned)_e_get_global_address_on_chip(j, k, p);
                 dest = (float *)(slave_core_addr + XT_MEM_ADDR);
                 e_memcopy(dest, xt_k, WK_ROWS*sizeof(float));
             }
@@ -72,7 +72,7 @@ int main(void) {
 
         for (j = NETWORK_ORIGIN_ROW; j < M + NETWORK_ORIGIN_ROW; ++j) {
             for (k = NETWORK_ORIGIN_COL; k < N + NETWORK_ORIGIN_COL; ++k) {
-                e_global_address_irq_set(j, k, E_SYNC);
+                _e_global_address_irq_set(j, k, E_SYNC);
             }
         }
 
