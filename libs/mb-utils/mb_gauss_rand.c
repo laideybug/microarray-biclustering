@@ -1,3 +1,4 @@
+#include <math.h>
 #include "mb_utils.h"
 
 float mb_gauss_rand() {

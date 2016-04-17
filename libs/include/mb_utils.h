@@ -1,7 +1,6 @@
 #ifndef MB_UTILS_H_INCLUDED
 #define MB_UTILS_H_INCLUDED
 
-#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 
