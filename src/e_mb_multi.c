@@ -39,16 +39,16 @@ int main(void) {
     mutex = (int *)DONE_MUTEX_MEM_ADDR;
 #else
 	done_flag = (unsigned *)(SHMEM_ADDR + out_mem_offset);
-    inf_clks = (unsigned *)(SHMEM_ADDR + (M_N*sizeof(unsigned)) + out_mem_offset);
-    up_clks = (unsigned *)(SHMEM_ADDR + (2*M_N*sizeof(unsigned)) + out_mem_offset);
+    inf_clks = (unsigned *)(SHMEM_ADDR + M_N*sizeof(unsigned) + out_mem_offset);
+    up_clks = (unsigned *)(SHMEM_ADDR + 2*M_N*sizeof(unsigned) + out_mem_offset);
 #endif
 
     // Address of this cores dual variable estimate
-    nu_k = (float *)(NU_K0_MEM_ADDR + (e_group_config.core_col * NU_MEM_OFFSET));
+    nu_k = (float *)(NU_K0_MEM_ADDR + e_group_config.core_col * NU_MEM_OFFSET);
     // Address of this cores incomplete scaling value
-    scaling_incomplete = (float *)(INC_SCAL_MEM_ADDR + (e_group_config.core_row * sizeof(float)));
+    scaling_incomplete = (float *)(INC_SCAL_MEM_ADDR + e_group_config.core_row * sizeof(float));
     // Address of this cores incomplete rms value
-    rms_wk_incomplete = (float *)(INC_RMS_MEM_ADDR + (e_group_config.core_row * sizeof(float)));
+    rms_wk_incomplete = (float *)(INC_RMS_MEM_ADDR + e_group_config.core_row * sizeof(float));
 
     // Re-enable interrupts
     e_irq_attach(E_SYNC, sync_isr);

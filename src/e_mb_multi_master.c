@@ -76,8 +76,6 @@ int main(void) {
             }
         }
 
-        (*(sample_no)) = 47;
-
         e_ctimer_set(E_CTIMER_1, E_CTIMER_MAX);
         e_ctimer_start(E_CTIMER_1, E_CTIMER_CLK);
 
@@ -85,8 +83,6 @@ int main(void) {
         __asm__ __volatile__("idle");
 
         timer_value_1 = E_CTIMER_MAX - e_ctimer_stop(E_CTIMER_1);
-
-        (*(sample_no)) = 48;
 
         inf_clks = 0;
         up_clks = 0;
