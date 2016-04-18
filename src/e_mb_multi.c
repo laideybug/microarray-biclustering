@@ -211,7 +211,7 @@ int main(void) {
             rms_wk = rms_wk + *rms_wk_incomplete_k;
         }
 
-		rms_wk = sqrt(rms_wk);
+		rms_wk = sqrtf(rms_wk);
 
 		if (rms_wk > 1.0f) {
             rms_wk_reciprocol = 1.0f / rms_wk;

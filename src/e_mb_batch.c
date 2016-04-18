@@ -50,7 +50,7 @@ int main(void) {
     nu_opt = (float *)(NU_OPT_K0_MEM_ADDR + (e_group_config.core_row * NU_MEM_OFFSET));
     // Address of this cores dual variable estimate
     nu_k = (float *)(NU_K0_MEM_ADDR + (e_group_config.core_col * NU_MEM_OFFSET));
-    
+
     // Re-enable interrupts
     e_irq_attach(E_SYNC, sync_isr);
     e_irq_mask(E_SYNC, E_FALSE);
@@ -165,7 +165,7 @@ int main(void) {
 		// Reset shared scaling value
 		nu_opt[WK_ROWS] = 0.0f;
 
-		rms_wk = sqrt(rms_wk);
+		rms_wk = sqrtf(rms_wk);
 
 		if (rms_wk > 1.0f) {
             rms_wk_reciprocol = 1.0f / rms_wk;

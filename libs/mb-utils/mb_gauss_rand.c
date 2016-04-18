@@ -9,9 +9,9 @@ float mb_gauss_rand() {
     if (phase == 0) {
         U = (rand() + 1.0f) / (RAND_MAX + 2.0f);
         V = rand() / (RAND_MAX + 1.0f);
-        Z = sqrt(-2 * log(U)) * sin(2 * PI * V);
+        Z = sqrtf(-2 * logf(U)) * sinf(2 * PI * V);
     } else {
-        Z = sqrt(-2 * log(U)) * cos(2 * PI * V);
+        Z = sqrtf(-2 * logf(U)) * cosf(2 * PI * V);
     }
 
     phase = 1 - phase;

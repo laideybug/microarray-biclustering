@@ -139,7 +139,7 @@ int main(void) {
 			nu_opt[i] = 0.0f;
 		}
 
-		rms_wk = sqrt(rms_wk);
+		rms_wk = sqrtf(rms_wk);
 
 		if (rms_wk > 1.0f) {
             rms_wk_reciprocol = 1.0f / rms_wk;

@@ -155,6 +155,18 @@ void mb_square_root_matrix(size_t rows, size_t cols, float matrix[rows][cols], f
 void mb_square_root_vector(size_t length, float vect[length], float sqrt_vector[length]);
 
 /*
+* Function: mb_norm
+* -----------------
+* Returns the Euclidean norm of a given vector
+*
+* length: the length of the vector
+* vect: the input vector to find the norm of
+*
+*/
+
+float mb_norm(size_t length, float vect[length]);
+
+/*
 * Function: mb_remove_dc
 * ----------------------
 * Removes the DC offset from a matrix of float data
