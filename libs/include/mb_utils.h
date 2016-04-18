@@ -209,4 +209,20 @@ void mb_init_dictionary(size_t rows, size_t cols, float dictionary[rows][cols]);
 
 void mb_get_column(size_t rows, size_t cols, int column_index, float matrix[rows][cols], float column[rows]);
 
+/*
+* Function: mb_get_row
+* --------------------
+* Retrieves a specified row from a matrix
+* and assigns it to a row vector
+*
+* rows: the number of rows in matrix
+* cols: the number of columns in matrix
+* column_index: the index of the row to be retrieved
+* matrix: the input matrix
+* column: the vector to store the retrieved row in
+*
+*/
+
+void mb_get_row(size_t rows, size_t cols, int row_index, float matrix[rows][cols], float row[rows]) {
+
 #endif // MB_UTILS_H_INCLUDED

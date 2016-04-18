@@ -1,6 +1,7 @@
 #include <e-hal.h>
 #include <e-loader.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <time.h>
 #include <unistd.h>
 #include "common.h"
@@ -8,10 +9,12 @@
 
 #define SHM_OFFSET 0x01000000
 
+int compare (const void *pa, const void *pb);
+
 int main(int argc, char *argv[]) {
     unsigned current_row, current_col, i, j, k, all_done, avg_inf_clks, avg_up_clks, total_inf_clks, total_up_clks, clr;
-    float input_data[IN_ROWS][IN_COLS], dictionary_w[IN_ROWS][N], dictionary_wk[IN_ROWS], dictionary_wk_i[WK_ROWS], update_wk[WK_ROWS], dual_var[WK_ROWS], data_point, secs, t_plus_one_reciprocol;
-    int t;
+    float input_data[IN_ROWS][IN_COLS], dictionary_w[IN_ROWS][N], dictionary_wk[IN_ROWS], dictionary_wk_i[WK_ROWS], update_wk[WK_ROWS], dual_var[WK_ROWS], scaling_matrix[N][IN_COLS], scaling_k[IN_COLS], scaling_vals[BATCH_STARTS_N], norms[N], data_point, secs, t_plus_one_reciprocol;
+    int t, batch_starts;
     FILE *file;
 #ifdef USE_MASTER_NODE
     unsigned masternode_clks, section_clks;
@@ -134,6 +137,7 @@ int main(int argc, char *argv[]) {
 
     previous_t = -1;
     secs = 0.0f;
+    batch_starts = BATCH_STARTS;
 
     // Start/wake workgroup
     e_start_group(&dev_master);
@@ -148,6 +152,7 @@ int main(int argc, char *argv[]) {
         e_read(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float) + (3*sizeof(unsigned)), &total_up_clks, sizeof(unsigned));
         e_read(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float) + (4*sizeof(unsigned)), &masternode_clks, sizeof(unsigned));
         e_read(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float) + (5*sizeof(unsigned)), &section_clks, sizeof(unsigned));
+        e_read(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float) + (6*sizeof(unsigned)), &scaling_vals, BATCH_STARTS_N*sizeof(float));
 
         if (t - previous_t) {
             avg_inf_clks = (unsigned)(total_inf_clks * ONE_OVER_M_N);
@@ -155,6 +160,16 @@ int main(int argc, char *argv[]) {
             previous_t = t;
             secs += masternode_clks * ONE_OVER_E_CYCLES;
             t_plus_one_reciprocol = 1.0f/(t+1);
+
+#ifdef BATCH_DISTRIBUTED
+            if (IN_COLS - t == 1) batch_starts = 1;
+#endif
+            // Collect scaling values
+            for (j = 0; j < batch_starts; ++j) {
+                for (k = 0; k < N; ++k) {
+                    scaling_matrix[k][t + j] = scaling_vals[j*N + k];
+                }
+            }
 
             printf("\nConfiguration: Master Node - %i x %i\n", M, N);
             printf("---------------------------------------\n");
@@ -195,7 +210,10 @@ int main(int argc, char *argv[]) {
 
     for (t = 0; t < IN_COLS; t+=BATCH_STARTS) {
 #ifdef BATCH_DISTRIBUTED
-        if (IN_COLS - t == 1) batch_toggle = 0;
+        if (IN_COLS - t == 1) {
+            batch_toggle = 0;
+            batch_starts = 1;
+        }
 #endif
 
         for (j = 0; j < M; ++j) {
@@ -239,6 +257,15 @@ int main(int argc, char *argv[]) {
             total_up_clks += up_clks;
         }
 
+        e_read(&mbuf, 0, 0, (3*M_N*sizeof(unsigned)), &scaling_vals, BATCH_STARTS_N*sizeof(float));
+
+        // Collect scaling values
+        for (j = 0; j < batch_starts; ++j) {
+            for (k = 0; k < N; ++k) {
+                scaling_matrix[k][t + j] = scaling_vals[j*N + k];
+            }
+        }
+
         avg_inf_clks = (unsigned)(total_inf_clks * ONE_OVER_M_N);
         avg_up_clks = (unsigned)(total_up_clks * ONE_OVER_M_N);
 
@@ -267,7 +294,36 @@ int main(int argc, char *argv[]) {
 
 #endif
 
-    printf("Done.");
+    printf("Done.\n");
+    printf("Gathering learned dictionary...\n");
+
+    // Get learned dictionary
+#ifdef BATCH_DISTRIBUTED
+    for (k = 0; k < N; ++ k) {
+        e_read(&dev, 0, k, WK_MEM_ADDR, &dictionary_wk_i, WK_ROWS*sizeof(float));
+
+        for (i = 0; i < WK_ROWS; ++i) {
+            dictionary_w[i][k] = dictionary_wk_i[i];
+        }
+    }
+#else
+    for (j = 0; j < M; ++j) {
+        for (k = 0; k < N; ++ k) {
+            e_read(&dev, j, k, WK_MEM_ADDR, &dictionary_wk_i, WK_ROWS*sizeof(float));
+
+            for (i = 0; i < WK_ROWS; ++i) {
+                dictionary_w[i + j*WK_ROWS][k] = dictionary_wk_i[i];
+            }
+        }
+    }
+#endif
+
+    for (i = 0; i < N; ++i) {
+        mb_get_row(N, IN_COLS, i, scaling_matrix, scaling_k);
+        norms[i] = mb_norm(IN_COLS, scaling_k);
+    }
+
+
 
     // Output data to .dat file here
 
@@ -276,4 +332,15 @@ int main(int argc, char *argv[]) {
     e_finalize();
 
     return EXIT_SUCCESS;
+}
+
+int compare (const void *pa, const void *pb) {
+    const int *a = pa;
+    const int *b = pb;
+
+    if (a[0] == b[0]) {
+        return a[1] - b[1];
+    } else {
+        return a[0] - b[0];
+    }
 }

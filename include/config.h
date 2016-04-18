@@ -42,6 +42,7 @@
 #define ONE_OVER_N 		    0.333333333
 #define ONE_OVER_M_N 		0.333333333
 #define BATCH_STARTS		1
+#define BATCH_STARTS_N      3
 #define BATCH_TOGGLE		0
 #define AGENT_BIN_PATH		"e_mb.srec"
 #define MASTER_BIN_PATH		"e_mb_master.srec"
@@ -57,6 +58,7 @@
 #define ONE_OVER_N 		    0.333333333
 #define ONE_OVER_M_N 		0.083333333
 #define BATCH_STARTS		4
+#define BATCH_STARTS_N      12
 #define BATCH_TOGGLE		1
 #define AGENT_BIN_PATH		"e_mb_batch.srec"
 #define MASTER_BIN_PATH		"e_mb_batch_master.srec"
@@ -72,6 +74,7 @@
 #define ONE_OVER_N 		    0.333333333
 #define ONE_OVER_M_N 		0.083333333
 #define BATCH_STARTS		1
+#define BATCH_STARTS_N      3
 #define BATCH_TOGGLE		0
 #define AGENT_BIN_PATH		"e_mb_multi.srec"
 #define MASTER_BIN_PATH		"e_mb_multi_master.srec"

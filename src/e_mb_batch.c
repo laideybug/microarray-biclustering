@@ -12,7 +12,7 @@ void sync_isr(int x);
 
 int main(void) {
 	unsigned *inf_clks, *up_clks, *done_flag, *p, i, j, reps, slave_core_addr, out_mem_offset, timer_value_0, timer_value_1;
-	float *xt, *wk, *update_wk, *nu_opt, *nu_opt_k0, *nu_opt_k1, *nu_opt_k2, *nu_opt_k3, *nu_k, *nu_k0, *nu_k1, *nu_k2, *dest, scaling, subgrad[WK_ROWS], rms_wk, rms_wk_reciprocol;
+	float *xt, *wk, *update_wk, *nu_opt, *nu_opt_k0, *nu_opt_k1, *nu_opt_k2, *nu_opt_k3, *nu_k, *nu_k0, *nu_k1, *nu_k2, *dest, *scaling_val, scaling, subgrad[WK_ROWS], rms_wk, rms_wk_reciprocol;
 #ifdef USE_MASTER_NODE
     unsigned *ready_flag, master_node_addr, done_flag_counter;
     e_mutex_t *mutex;
@@ -34,16 +34,18 @@ int main(void) {
 
 #ifdef USE_MASTER_NODE
     master_node_addr = (unsigned)_e_get_global_address_on_chip(MASTER_NODE_ROW, MASTER_NODE_COL, p);
+    done_flag = (unsigned *)(master_node_addr + DONE_MEM_ADDR);
 	ready_flag = (unsigned *)(master_node_addr + READY_MEM_ADDR + out_mem_offset);
 	inf_clks = (unsigned *)(master_node_addr + INF_CLKS_MEM_ADDR + out_mem_offset);
     up_clks = (unsigned *)(master_node_addr + UP_CLKS_MEM_ADDR + out_mem_offset);
-    done_flag = (unsigned *)(master_node_addr + DONE_MEM_ADDR);
+    scaling_val = (float *)(master_node_addr + SCAL_MEM_ADDR + out_mem_offset);
 
     mutex = (int *)DONE_MUTEX_MEM_ADDR;
 #else
     done_flag = (unsigned *)(SHMEM_ADDR + out_mem_offset);
     inf_clks = (unsigned *)(SHMEM_ADDR + M_N*sizeof(unsigned) + out_mem_offset);
     up_clks = (unsigned *)(SHMEM_ADDR + 2*M_N*sizeof(unsigned) + out_mem_offset);
+    scaling_val = (float *)(SHMEM_ADDR + 3*M_N*sizeof(unsigned) + out_mem_offset);
 #endif
 
     // Address of this cores optimal dual variable estimate
@@ -183,6 +185,7 @@ int main(void) {
         // Write benchmark values
 		(*(inf_clks)) = timer_value_0;
 		(*(up_clks)) = timer_value_1;
+		(*(scaling_val)) = scaling;
 		// Increment "done" flag for master node
 		done_flag_counter = (*(done_flag));
 		done_flag_counter = done_flag_counter + 1;
@@ -199,6 +202,7 @@ int main(void) {
         // Write benchmark values
         (*(inf_clks)) = timer_value_0;
 		(*(up_clks)) = timer_value_1;
+		(*(scaling_val)) = scaling;
 		// Raising "done" flag
         (*(done_flag)) = SET_FLAG;
         // Put core in idle state

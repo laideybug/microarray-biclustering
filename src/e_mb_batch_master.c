@@ -7,7 +7,7 @@ void sync_isr(int x);
 
 int main(void) {
 	unsigned *all_done_flag, *total_inf_clks, *total_up_clks, *section_clks, *slave_ready_flag, *slave_done_counter, *slave_inf_clks, *slave_up_clks, *masternode_clks, *p, slave_core_addr, t, j, k, all_ready, inf_clks, up_clks, timer_value_0, timer_value_1;
-	float *xt, *dest;
+	float *xt, *dest, *slave_scaling_vals, *scaling_vals;
 	int *sample_no, batch_toggle;
 	e_mutex_t *mutex;
 
@@ -17,8 +17,10 @@ int main(void) {
     total_up_clks = (unsigned *)(SHMEM_ADDR + IN_ROWS*IN_COLS*sizeof(float) + 3*sizeof(unsigned));
     masternode_clks = (unsigned *)(SHMEM_ADDR + IN_ROWS*IN_COLS*sizeof(float) + 4*sizeof(unsigned));
     section_clks = (unsigned *)(SHMEM_ADDR + IN_ROWS*IN_COLS*sizeof(float) + 5*sizeof(unsigned));
+    scaling_vals = (float *)(SHMEM_ADDR + IN_ROWS*IN_COLS*sizeof(float) + 6*sizeof(unsigned));
 
     slave_done_counter = (unsigned *)DONE_MEM_ADDR;
+    slave_scaling_vals = (float *)SCAL_MEM_ADDR;
     mutex = (int *)DONE_MUTEX_MEM_ADDR;
     p = CLEAR_FLAG;
     batch_toggle = BATCH_TOGGLE;
@@ -98,11 +100,12 @@ int main(void) {
         timer_value_0 = E_CTIMER_MAX - e_ctimer_stop(E_CTIMER_0);
 
         // Write benchmark results
-        (*(sample_no)) = t;
+        e_memcopy(scaling_vals, slave_scaling_vals, M_N*sizeof(float));
         (*(total_inf_clks)) = inf_clks;
         (*(total_up_clks)) = up_clks;
         (*(masternode_clks)) = timer_value_0;
         (*(section_clks)) = timer_value_1;
+        (*(sample_no)) = t;
 	}
 
 	// Raising "done" flag for host
