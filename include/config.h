@@ -6,9 +6,9 @@
 /*==============================================*/
 
 // Algorithm modes - CHOOSE ONE, comment out the rest
-//#define DISTRIBUTED
+#define DISTRIBUTED
 //#define BATCH_DISTRIBUTED
-#define MULTI_DISTRIBUTED
+//#define MULTI_DISTRIBUTED
 
 // Network configuration options - comment out as needed
 #define USE_MASTER_NODE

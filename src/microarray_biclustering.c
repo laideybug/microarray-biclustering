@@ -9,13 +9,19 @@
 
 #define SHM_OFFSET 0x01000000
 
-int compare (const void *pa, const void *pb);
+int cmp(const void *a, const void *b);
+
+typedef struct str {
+    float value;
+    unsigned index;
+} str;
 
 int main(int argc, char *argv[]) {
     unsigned current_row, current_col, i, j, k, all_done, avg_inf_clks, avg_up_clks, total_inf_clks, total_up_clks, clr;
-    float input_data[IN_ROWS][IN_COLS], dictionary_w[IN_ROWS][N], dictionary_wk[IN_ROWS], dictionary_wk_i[WK_ROWS], update_wk[WK_ROWS], dual_var[WK_ROWS], scaling_matrix[N][IN_COLS], scaling_k[IN_COLS], scaling_vals[BATCH_STARTS_N], norms[N], data_point, secs, t_plus_one_reciprocol;
+    float input_data[IN_ROWS][IN_COLS], dictionary_w[IN_ROWS][N], dictionary_wk[IN_ROWS], dictionary_wk_i[WK_ROWS], output_dict[IN_ROWS][N], update_wk[WK_ROWS], dual_var[WK_ROWS], scaling_matrix[N][IN_COLS], scaling_k[IN_COLS], scaling_vals[BATCH_STARTS_N], data_point, secs, t_plus_one_reciprocol;
     int t, batch_starts;
-    FILE *file;
+    struct str norms[N];
+    FILE *input_file, *output_file;
 #ifdef USE_MASTER_NODE
     unsigned masternode_clks, section_clks;
     int previous_t;
@@ -32,13 +38,13 @@ int main(int argc, char *argv[]) {
     printf("\nReading input data...\n");
 
     // Read input data
-    file = fopen(DATA_PATH, "r");
+    input_file = fopen(DATA_PATH, "r");
 
-    if (file != NULL) {
+    if (input_file != NULL) {
         current_row = 0;
         current_col = 0;
 
-        while (fscanf(file, "%f", &data_point) != EOF) {
+        while (fscanf(input_file, "%f", &data_point) != EOF) {
             input_data[current_row][current_col] = data_point;
 
             // data.txt is in 12625 x 56 format -
@@ -52,7 +58,7 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        fclose(file);
+        fclose(input_file);
     } else {
         printf("Error: Failed to open input file.\n");
         return EXIT_FAILURE;
@@ -295,7 +301,7 @@ int main(int argc, char *argv[]) {
 #endif
 
     printf("Done.\n");
-    printf("Gathering learned dictionary...\n");
+    printf("Gathering learned dictionary...");
 
     // Get learned dictionary
 #ifdef BATCH_DISTRIBUTED
@@ -320,12 +326,37 @@ int main(int argc, char *argv[]) {
 
     for (i = 0; i < N; ++i) {
         mb_get_row(N, IN_COLS, i, scaling_matrix, scaling_k);
-        norms[i] = mb_norm(IN_COLS, scaling_k);
+        norms[i].value = mb_norm(IN_COLS, scaling_k);
+        norms[i].index = i;
     }
 
+    qsort(norms, N, sizeof(norms[0]), cmp);
 
+    for (j = 0; j < IN_ROWS; ++j) {
+        for (k = 0; k < N; ++k) {
+            output_dict[j][k] = dictionary_w[j][norms[k].index];
+        }
+    }
 
     // Output data to .dat file here
+    output_file = fopen(OUT_PATH, "ab+");
+
+    if (output_file != NULL) {
+        for (j = 0; j < IN_ROWS; ++j) {
+            for (k = 0; k < N; ++k) {
+                fprintf(output_file, "%f ", output_dict[j][k]);
+            }
+
+            fprintf(output_file, "\n");
+        }
+
+        fclose(output_file);
+    } else {
+        printf("Error: Failed to create output file.\n");
+        return EXIT_FAILURE;
+    }
+
+    printf("done.\nPlot results with './plot.sh'\n\n");
 
     e_close(&dev);
     e_free(&mbuf);
@@ -334,13 +365,15 @@ int main(int argc, char *argv[]) {
     return EXIT_SUCCESS;
 }
 
-int compare (const void *pa, const void *pb) {
-    const int *a = pa;
-    const int *b = pb;
+int cmp(const void *a,const void *b) {
+    struct str *a_1 = (struct str *)a;
+    struct str *a_2 = (struct str*)b;
 
-    if (a[0] == b[0]) {
-        return a[1] - b[1];
-    } else {
-        return a[0] - b[0];
+    if ((*a_1).value > (*a_2).value) {
+        return -1;
+    } else if ((*a_1).value < (*a_2).value) {
+        return 1;
     }
+
+    return 0;
 }

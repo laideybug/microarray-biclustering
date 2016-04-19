@@ -223,6 +223,6 @@ void mb_get_column(size_t rows, size_t cols, int column_index, float matrix[rows
 *
 */
 
-void mb_get_row(size_t rows, size_t cols, int row_index, float matrix[rows][cols], float row[rows]) {
+void mb_get_row(size_t rows, size_t cols, int row_index, float matrix[rows][cols], float row[rows]);
 
 #endif // MB_UTILS_H_INCLUDED

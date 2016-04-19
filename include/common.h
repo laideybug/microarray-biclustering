@@ -15,12 +15,14 @@
 #define ONE_OVER_DELTA 	    10.0
 #define MU_2 			    0.01
 #define ALPHA 			    0.0
-#define NUM_ITER 		    2000
+//#define NUM_ITER 		    2000
+#define NUM_ITER 		    10
 #define ALPHA_W 		    0.0
 #define BETA 			    0.01
 #define SET_FLAG            0x00000001
 #define CLEAR_FLAG          0x00000000
 #define DATA_PATH			"../data/data.txt"
+#define OUT_PATH			"../data/dict.dat"
 
 // Core speeds - cycles per second
 #define E_CYCLES            600e6   // 600MHz (Epiphany)
