@@ -83,7 +83,7 @@ int main(void) {
                 scaling += wk[i] * nu_opt[i];
             }
 
-			scaling = adjust_scaling(scaling);
+            scaling = adjust_scaling(scaling);
 
             for (i = 0; i < WK_ROWS; ++i) {
                 /* D * diagmat(scaling*my_minus_mu) */
