@@ -220,13 +220,13 @@ inline float adjust_scaling(float scaling) {
 */
 
 inline float sign(float value) {
-	if (value > 0.0f) {
-		return 1.0f;
-	} else if (value < 0.0f) {
-		return -1.0f;
-	} else {
-		return 0.0f;
-	}
+    if (value > 0.0f) {
+        return 1.0f;
+    } else if (value < 0.0f) {
+        return -1.0f;
+    } else {
+        return 0.0f;
+    }
 }
 
 /*
