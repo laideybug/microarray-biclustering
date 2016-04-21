@@ -76,19 +76,19 @@ int main(void) {
         for (reps = 0; reps < NUM_ITER; ++reps) {
             scaling = 0.0f;
 
-			for (i = 0; i < WK_ROWS; ++i) {
+            for (i = 0; i < WK_ROWS; ++i) {
                 /* subgrad = (nu-xt)*minus_mu_over_N */
                 subgrad[i] = (nu_opt[i] - xt[i]) * -MU_2 * ONE_OVER_N;
                 /* scaling = (my_W_transpose*nu) */
                 scaling += wk[i] * nu_opt[i];
-			}
+            }
 
 			scaling = adjust_scaling(scaling);
 
-			for (i = 0; i < WK_ROWS; ++i) {
+            for (i = 0; i < WK_ROWS; ++i) {
                 /* D * diagmat(scaling*my_minus_mu) */
                 nu_k[i] = wk[i] * scaling * -MU_2;
-			}
+            }
 
             // Exchange dual variable estimates along row
             for (j = 0; j < e_group_config.group_cols; ++j) {
