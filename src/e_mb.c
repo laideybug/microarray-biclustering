@@ -20,7 +20,7 @@ int main(void) {
 
     xt = (float *)XT_MEM_ADDR;	            // Address of xt (WK_ROWS x 1)
     wk = (float *)WK_MEM_ADDR;	            // Address of dictionary atom (WK_ROWS x 1)
-    update_wk = (float *)UP_WK_MEM_ADDR;	// Address of update atom (WK_ROWS x 1)
+    update_wk = (float *)UP_WK_MEM_ADDR;    // Address of update atom (WK_ROWS x 1)
     nu_k0 = (float *)NU_K0_MEM_ADDR;	    // Address of node 0 dual variable estimate (WK_ROWS x 1)
     nu_k1 = (float *)NU_K1_MEM_ADDR;        // Address of node 1 dual variable estimate (WK_ROWS x 1)
     nu_k2 = (float *)NU_K2_MEM_ADDR;        // Address of node 2 dual variable estimate (WK_ROWS x 1)
