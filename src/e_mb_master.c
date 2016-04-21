@@ -51,7 +51,7 @@ int main(void) {
         }
     }
 
-	for (t = 0; t < IN_COLS; ++t) {
+	for (t = 0; t < 1; ++t) {
         e_ctimer_set(E_CTIMER_0, E_CTIMER_MAX);
         e_ctimer_start(E_CTIMER_0, E_CTIMER_CLK);
 

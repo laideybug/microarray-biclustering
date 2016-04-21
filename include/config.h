@@ -6,12 +6,12 @@
 /*==============================================*/
 
 // Algorithm modes - CHOOSE ONE, comment out the rest
-#define DISTRIBUTED
+//#define DISTRIBUTED
 //#define BATCH_DISTRIBUTED
-//#define MULTI_DISTRIBUTED
+#define MULTI_DISTRIBUTED
 
 // Network configuration options - comment out as needed
-#define USE_MASTER_NODE
+//#define USE_MASTER_NODE
 //#define USE_DMA
 
 /*==============================================*/
@@ -46,6 +46,7 @@
 #define BATCH_TOGGLE		0
 #define AGENT_BIN_PATH		"e_mb.srec"
 #define MASTER_BIN_PATH		"e_mb_master.srec"
+#define MODE        		"Distributed"
 
 #elif 	defined BATCH_DISTRIBUTED
 #undef	DISTRIBUTED
@@ -62,6 +63,7 @@
 #define BATCH_TOGGLE		1
 #define AGENT_BIN_PATH		"e_mb_batch.srec"
 #define MASTER_BIN_PATH		"e_mb_batch_master.srec"
+#define MODE        		"Batch-distributed"
 
 #elif 	defined MULTI_DISTRIBUTED
 #undef	DISTRIBUTED
@@ -78,6 +80,7 @@
 #define BATCH_TOGGLE		0
 #define AGENT_BIN_PATH		"e_mb_multi.srec"
 #define MASTER_BIN_PATH		"e_mb_multi_master.srec"
+#define MODE        		"Multi-distributed"
 #endif
 
 #ifdef 	USE_MASTER_NODE

@@ -2,6 +2,7 @@
 #include <e-loader.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/time.h>
 #include <time.h>
 #include <unistd.h>
 #include "common.h"
@@ -9,25 +10,25 @@
 
 #define SHM_OFFSET 0x01000000
 
-int cmp(const void *a, const void *b);
-
-typedef struct str {
+typedef struct fl_ind {
     float value;
     unsigned index;
-} str;
+} fl_ind;
+
+int cmp(const void *a, const void *b);
 
 int main(int argc, char *argv[]) {
     unsigned current_row, current_col, i, j, k, all_done, avg_inf_clks, avg_up_clks, total_inf_clks, total_up_clks, clr;
-    float input_data[IN_ROWS][IN_COLS], dictionary_w[IN_ROWS][N], dictionary_wk[IN_ROWS], dictionary_wk_i[WK_ROWS], output_dict[IN_ROWS][N], update_wk[WK_ROWS], dual_var[WK_ROWS], scaling_matrix[N][IN_COLS], scaling_k[IN_COLS], scaling_vals[BATCH_STARTS_N], data_point, secs, t_plus_one_reciprocol;
+    float xt[IN_ROWS], input_data[IN_ROWS][IN_COLS], dictionary_w[IN_ROWS][N], dictionary_wk[IN_ROWS], dictionary_wk_i[WK_ROWS], output_dict[IN_ROWS][N], update_wk[WK_ROWS], dual_var[WK_ROWS], scaling_matrix[N][IN_COLS], scaling_k[IN_COLS], scaling_vals[BATCH_STARTS_N], data_point, secs, t_plus_one_reciprocol;
     int t, batch_starts;
-    struct str norms[N];
+    struct fl_ind norms[N];
     FILE *input_file, *output_file;
 #ifdef USE_MASTER_NODE
     unsigned masternode_clks, section_clks;
     int previous_t;
 #else
     unsigned done[M_N], inf_clks, up_clks;
-    float xt[IN_ROWS], xt_k[WK_ROWS];
+    float xt_k[WK_ROWS];
     int batch_toggle;
 #endif
 
@@ -64,10 +65,23 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
+    printf("Initialising dictionary...\n");
+
     // Remove DC component from input data (i.e. centering)
     mb_remove_dc(IN_ROWS, IN_COLS, input_data);
-    // Initialise the dictionaries
-    mb_init_dictionary(IN_ROWS, N, dictionary_w);
+
+    // Randomly initialise and normalise the dictionary
+    mb_fill_matrix_random(IN_ROWS, N, dictionary_w);
+    mb_scalar_multiply(IN_ROWS, N, dictionary_w, 10.0f);
+    mb_norm_matrix(IN_ROWS, N, dictionary_w);
+
+    for (j = 0; j < IN_ROWS; ++j) {
+        for (k = 0; k < N; ++k) {
+            printf("%f ", dictionary_w[j][k]);
+        }
+
+        printf("\n");
+    }
 
     printf("Initialising network...\n");
 
@@ -90,14 +104,20 @@ int main(int argc, char *argv[]) {
     // Initialise update dictionary and dual variable vectors with 0
     mb_fill_vector(WK_ROWS, update_wk, 0.0f);
     mb_fill_vector(WK_ROWS, dual_var, 0.0f);
+    mb_fill_vector(IN_ROWS, scaling_k, 0.0f);
+    mb_fill_matrix(N, IN_COLS, scaling_matrix, 0.0f);
 
     // Load the dictionary atoms into each core
     for (j = 0; j < M; ++j) {
         for (k = 0; k < N; ++k) {
-            mb_get_column(IN_ROWS, N, k, dictionary_w, dictionary_wk);
+            mb_get_matrix_column(IN_ROWS, N, k, dictionary_w, dictionary_wk);
 
             for (i = 0; i < WK_ROWS; ++i) {
+#ifdef BATCH_DISTRIBUTED
+                dictionary_wk_i[i] = *(dictionary_wk + i);
+#else
                 dictionary_wk_i[i] = *(dictionary_wk + (i + j*WK_ROWS));
+#endif
             }
 
             e_write(&dev, j, k, WK_MEM_ADDR, &dictionary_wk_i, WK_ROWS*sizeof(float));
@@ -131,7 +151,11 @@ int main(int argc, char *argv[]) {
     };
 
     // Write input data to shared memory
-    e_write(&mbuf, 0, 0, 0x0, &input_data, IN_ROWS*IN_COLS*sizeof(float));
+    for (i = 0; i < IN_COLS; ++i) {
+        mb_get_matrix_column(IN_ROWS, IN_COLS, i, input_data, xt);
+        e_write(&mbuf, 0, 0, i*IN_ROWS*sizeof(float), &xt, IN_ROWS*sizeof(float));
+    }
+
     // Clear done flag in shared memory
     e_write(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float), &clr, sizeof(unsigned));
 
@@ -177,9 +201,14 @@ int main(int argc, char *argv[]) {
                 }
             }
 
-            printf("\nConfiguration: Master Node - %i x %i\n", M, N);
+            printf("\nMode: %s\n", MODE);
+            printf("Config: Master Node, %i x %i\n", M, N);
             printf("---------------------------------------\n");
-            printf("Processed input sample: %u\n", t);
+#ifdef BATCH_DISTRIBUTED
+            printf("Processed input samples: %u - %u\n", t+1, t+batch_starts);
+#else
+            printf("Processed input sample: %u\n", t+1);
+#endif
             printf("Average clock cycles for inference step: %u clock cycles\n", avg_inf_clks);
             printf("Average network speed of inference step: %.6f seconds\n", avg_inf_clks * ONE_OVER_E_CYCLES);
             printf("Average clock cycles for update step: %u clock cycles\n", avg_up_clks);
@@ -203,16 +232,18 @@ int main(int argc, char *argv[]) {
 
 #else
     // Allocate shared memory
-    if (e_alloc(&mbuf, SHM_OFFSET, 3*M_N*sizeof(unsigned)) != E_OK) {
+    if (e_alloc(&mbuf, SHM_OFFSET, 3*M_N*sizeof(unsigned) + BATCH_STARTS_N*sizeof(float)) != E_OK) {
         printf("Error: Failed to allocate shared memory\n");
         return EXIT_FAILURE;
     };
 
     printf("Network started...\n\n");
 
-    clock_t start = clock(), diff, current, arm_cycles;
-    clock_t last_clock = start;
+    struct timeval start, end;
+    gettimeofday(&start, NULL);
+    secs = 0.0f;
     batch_toggle = BATCH_TOGGLE;
+    batch_starts = BATCH_STARTS;
 
     for (t = 0; t < IN_COLS; t+=BATCH_STARTS) {
 #ifdef BATCH_DISTRIBUTED
@@ -223,7 +254,7 @@ int main(int argc, char *argv[]) {
 #endif
 
         for (j = 0; j < M; ++j) {
-            mb_get_column(IN_ROWS, IN_COLS, t+j*batch_toggle, input_data, xt);
+            mb_get_matrix_column(IN_ROWS, IN_COLS, t+j*batch_toggle, input_data, xt);
 
             for (k = 0; k < WK_ROWS; ++k) {
                 xt_k[k] = *(xt + (k + j*WK_ROWS));
@@ -275,21 +306,22 @@ int main(int argc, char *argv[]) {
         avg_inf_clks = (unsigned)(total_inf_clks * ONE_OVER_M_N);
         avg_up_clks = (unsigned)(total_up_clks * ONE_OVER_M_N);
 
-        current = clock();
-        diff = current - start;
-        secs = diff / CLOCKS_PER_SEC;
-        arm_cycles = current - last_clock;
-        last_clock = current;
+        gettimeofday(&end, NULL);
+        secs = ((end.tv_sec + end.tv_usec * 0.000001) - (start.tv_sec + start.tv_usec * 0.000001));
         t_plus_one_reciprocol = 1.0f/(t+1);
 
-        printf("\nConfiguration: ARM - %i x %i\n", M, N);
+        printf("\nMode: %s\n", MODE);
+        printf("Config: Master Node, %i x %i\n", M, N);
         printf("-------------------------------\n");
-        printf("Processed input sample: %u\n", t);
+#ifdef BATCH_DISTRIBUTED
+        printf("Processed input samples: %u - %u\n", t+1, t+batch_starts);
+#else
+        printf("Processed input sample: %u\n", t+1);
+#endif
         printf("Average clock cycles for inference step: %u clock cycles\n", avg_inf_clks);
         printf("Average network speed of inference step: %.6f seconds\n", avg_inf_clks * ONE_OVER_E_CYCLES);
         printf("Average clock cycles for update step: %u clock cycles\n", avg_up_clks);
         printf("Average network speed of update step: %.6f seconds\n", avg_up_clks * ONE_OVER_E_CYCLES);
-        printf("ARM clock cycles: %u clock cycles\n", (unsigned)arm_cycles);
         printf("-------------------------------\n");
         printf("Percent complete: %.2f%%\n", (t+1)*100.0f*ONE_OVER_IN_COLS);
         printf("Average speed: %.6f seconds/sample\n", secs*t_plus_one_reciprocol);
@@ -301,7 +333,7 @@ int main(int argc, char *argv[]) {
 #endif
 
     printf("Done.\n");
-    printf("Gathering learned dictionary...");
+    printf("Gathering learned dictionary...\n");
 
     // Get learned dictionary
 #ifdef BATCH_DISTRIBUTED
@@ -325,8 +357,8 @@ int main(int argc, char *argv[]) {
 #endif
 
     for (i = 0; i < N; ++i) {
-        mb_get_row(N, IN_COLS, i, scaling_matrix, scaling_k);
-        norms[i].value = mb_norm(IN_COLS, scaling_k);
+        mb_get_matrix_row(N, IN_COLS, i, scaling_matrix, scaling_k);
+        norms[i].value = mb_norm_vector(IN_COLS, scaling_k);
         norms[i].index = i;
     }
 
@@ -335,11 +367,22 @@ int main(int argc, char *argv[]) {
     for (j = 0; j < IN_ROWS; ++j) {
         for (k = 0; k < N; ++k) {
             output_dict[j][k] = dictionary_w[j][norms[k].index];
+            printf("%f ", dictionary_w[j][k]);
         }
+
+        printf("\n");
+    }
+
+    for (j = 0; j < IN_ROWS; ++j) {
+        for (k = 0; k < N; ++k) {
+            printf("%f ", dictionary_w[j][k]);
+        }
+
+        printf("\n");
     }
 
     // Output data to .dat file here
-    output_file = fopen(OUT_PATH, "ab+");
+    output_file = fopen(OUT_PATH, "wb+");
 
     if (output_file != NULL) {
         for (j = 0; j < IN_ROWS; ++j) {
@@ -356,7 +399,7 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    printf("done.\nPlot results with './plot.sh'\n\n");
+    printf("\nDone. Plot results with './plot.sh'\n\n");
 
     e_close(&dev);
     e_free(&mbuf);
@@ -365,9 +408,20 @@ int main(int argc, char *argv[]) {
     return EXIT_SUCCESS;
 }
 
-int cmp(const void *a,const void *b) {
-    struct str *a_1 = (struct str *)a;
-    struct str *a_2 = (struct str*)b;
+/*
+* Function: cmp
+* -------------
+* Comparator function to be used with qsort
+* to obtain a DESCENDING value sort
+*
+* a: first value to compare
+* b: second value to compare
+*
+*/
+
+int cmp(const void *a, const void *b) {
+    struct fl_ind *a_1 = (struct fl_ind *)a;
+    struct fl_ind *a_2 = (struct fl_ind *)b;
 
     if ((*a_1).value > (*a_2).value) {
         return -1;
@@ -377,3 +431,4 @@ int cmp(const void *a,const void *b) {
 
     return 0;
 }
+

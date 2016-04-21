@@ -15,8 +15,7 @@
 #define ONE_OVER_DELTA 	    10.0
 #define MU_2 			    0.01
 #define ALPHA 			    0.0
-//#define NUM_ITER 		    2000
-#define NUM_ITER 		    10
+#define NUM_ITER 		    2000
 #define ALPHA_W 		    0.0
 #define BETA 			    0.01
 #define SET_FLAG            0x00000001

@@ -81,8 +81,8 @@ void mb_fill_matrix_random(size_t rows, size_t cols, float matrix[rows][cols]);
 void mb_fill_vector(size_t length, float vect[length], float num);
 
 /*
-* Function: mb_mean
-* -----------------
+* Function: mb_column_mean
+* ------------------------
 * Averages each column of a matrix and stores the result
 * in a given row vector
 *
@@ -93,11 +93,11 @@ void mb_fill_vector(size_t length, float vect[length], float num);
 *
 */
 
-void mb_mean(size_t rows, size_t cols, float matrix[rows][cols], float mean_vector[cols]);
+void mb_column_mean(size_t rows, size_t cols, float matrix[rows][cols], float mean_vector[cols]);
 
 /*
-* Function: mb_sum
-* ----------------
+* Function: mb_column_sum
+* -----------------------
 * Sums each column of a matrix and stores the result
 * in a given row vector
 *
@@ -108,11 +108,11 @@ void mb_mean(size_t rows, size_t cols, float matrix[rows][cols], float mean_vect
 *
 */
 
-void mb_sum(size_t rows, size_t cols, float matrix[rows][cols], float sum_vector[cols]);
+void mb_column_sum(size_t rows, size_t cols, float matrix[rows][cols], float sum_vector[cols]);
 
 /*
-* Function: mb_square
-* -------------------
+* Function: mb_element_square_matrix
+* ----------------------------------
 * Squares each element of the input matrix
 *
 * rows: the number of rows in matrix
@@ -121,11 +121,11 @@ void mb_sum(size_t rows, size_t cols, float matrix[rows][cols], float sum_vector
 *
 */
 
-void mb_square(size_t rows, size_t cols, float matrix[rows][cols]);
+void mb_element_square_matrix(size_t rows, size_t cols, float matrix[rows][cols]);
 
 /*
-* Function: mb_square_root_matrix
-* -------------------------------
+* Function: mb_element_sqrt_matrix
+* --------------------------------
 * Finds the square root of each element of
 * the input matrix and places the results
 * in an output matrix
@@ -137,34 +137,20 @@ void mb_square(size_t rows, size_t cols, float matrix[rows][cols]);
 *
 */
 
-void mb_square_root_matrix(size_t rows, size_t cols, float matrix[rows][cols], float sqrt_matrix[rows][cols]);
+void mb_element_sqrt_matrix(size_t rows, size_t cols, float matrix[rows][cols]);
 
 /*
-* Function: mb_square_root_vector
-* -------------------------------
-* Finds the square root of each element of
-* the input vector and places the results
-* in an output vector
+* Function: mb_element_sqrt_vector
+* --------------------------------
+* Squares each element of
+* the input vector
 *
 * length: the number of elements in vector
 * vector: the input vector
-* sqrt_vector: the output vector
 *
 */
 
-void mb_square_root_vector(size_t length, float vect[length], float sqrt_vector[length]);
-
-/*
-* Function: mb_norm
-* -----------------
-* Returns the Euclidean norm of a given vector
-*
-* length: the length of the vector
-* vect: the input vector to find the norm of
-*
-*/
-
-float mb_norm(size_t length, float vect[length]);
+void mb_element_sqrt_vector(size_t length, float vect[length]);
 
 /*
 * Function: mb_remove_dc
@@ -180,22 +166,33 @@ float mb_norm(size_t length, float vect[length]);
 void mb_remove_dc(size_t rows, size_t cols, float matrix[rows][cols]);
 
 /*
-* Function: mb_init_dictionary
-* ----------------------------
-* Initialises the full dictionary and full
-* update dictionary
+* Function: mb_norm_vector
+* ------------------------
+* Returns the Euclidean norm of a given vector
 *
-* rows: the number of rows in matrix
-* cols: the number of columns in matrix
-* dictionary: the dictionary
+* length: the length of the vector
+* vect: the input vector to find the norm of
 *
 */
 
-void mb_init_dictionary(size_t rows, size_t cols, float dictionary[rows][cols]);
+float mb_norm_vector(size_t length, float vect[length]);
 
 /*
-* Function: mb_get_column
-* -----------------------
+* Function: mb_norm_matrix
+* ------------------------
+* Normalise the elements of the given matrix
+*
+* rows: the number of rows in matrix
+* cols: the number of columns in matrix
+* matrix: the matrix
+*
+*/
+
+void mb_norm_matrix(size_t rows, size_t cols, float matrix[rows][cols]);
+
+/*
+* Function: mb_get_matrix_column
+* ------------------------------
 * Retrieves a specified column from a matrix
 * and assigns it to a column vector
 *
@@ -207,22 +204,22 @@ void mb_init_dictionary(size_t rows, size_t cols, float dictionary[rows][cols]);
 *
 */
 
-void mb_get_column(size_t rows, size_t cols, int column_index, float matrix[rows][cols], float column[rows]);
+void mb_get_matrix_column(size_t rows, size_t cols, int column_index, float matrix[rows][cols], float column[rows]);
 
 /*
-* Function: mb_get_row
-* --------------------
+* Function: mb_get_matrix_row
+* ---------------------------
 * Retrieves a specified row from a matrix
 * and assigns it to a row vector
 *
 * rows: the number of rows in matrix
 * cols: the number of columns in matrix
-* column_index: the index of the row to be retrieved
+* row_index: the index of the row to be retrieved
 * matrix: the input matrix
-* column: the vector to store the retrieved row in
+* row: the vector to store the retrieved row in
 *
 */
 
-void mb_get_row(size_t rows, size_t cols, int row_index, float matrix[rows][cols], float row[rows]);
+void mb_get_matrix_row(size_t rows, size_t cols, int row_index, float matrix[rows][cols], float row[rows]);
 
 #endif // MB_UTILS_H_INCLUDED

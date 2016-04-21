@@ -2,12 +2,11 @@
 
 void mb_remove_dc(size_t rows, size_t cols, float matrix[rows][cols]) {
     float ones_vector[rows];
-    mb_fill_vector(rows, ones_vector, 1.0f);
-
     float mean_vector[cols];
-    mb_mean(rows, cols, matrix, mean_vector);
-
     float mult_matrix[rows][cols];
+
+    mb_fill_vector(rows, ones_vector, 1.0f);
+    mb_column_mean(rows, cols, matrix, mean_vector);
 
     for (int j = 0; j < rows; ++j) {
         for (int k = 0; k < cols; ++k) {

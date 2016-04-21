@@ -6,7 +6,7 @@
 #include "common.h"
 #include "e_synch.h"
 
-void adjustScaling(float scaling);
+float adjust_scaling(float scaling);
 float sign(float value);
 void sync_isr(int x);
 
@@ -78,13 +78,12 @@ int main(void) {
 
 			for (i = 0; i < WK_ROWS; ++i) {
 				/* subgrad = (nu-xt)*minus_mu_over_N */
-				subgrad[i] = nu_opt[i] - xt[i];
-				subgrad[i] = subgrad[i] * -MU_2 * ONE_OVER_N;
+				subgrad[i] = (nu_opt[i] - xt[i]) * -MU_2 * ONE_OVER_N;
 				/* scaling = (my_W_transpose*nu) */
-				scaling = scaling + wk[i] * nu_opt[i];
+				scaling += wk[i] * nu_opt[i];
 			}
 
-			adjustScaling(scaling);
+			scaling = adjust_scaling(scaling);
 
 			for (i = 0; i < WK_ROWS; ++i) {
 				/* D * diagmat(scaling*my_minus_mu) */
@@ -109,7 +108,7 @@ int main(void) {
 
 	    	// Average dual variable estimates
 			for (i = 0; i < WK_ROWS; ++i) {
-	            nu_opt[i] = nu_opt[i] + subgrad[i] + ((nu_k0[i] + nu_k1[i] + nu_k2[i]) * ONE_OVER_N);
+	            nu_opt[i] += subgrad[i] + ((nu_k0[i] + nu_k1[i] + nu_k2[i]) * ONE_OVER_N);
 			}
 		}
 
@@ -121,10 +120,10 @@ int main(void) {
 
 		for (i = 0; i < WK_ROWS; ++i) {
 			/* scaling = (my_W_transpose*nu); */
-			scaling = scaling + wk[i] * nu_opt[i];
+			scaling += wk[i] * nu_opt[i];
 		}
 
-		adjustScaling(scaling);
+		scaling = adjust_scaling(scaling);
 
 		// Update dictionary atom
 		rms_wk = 0.0f;
@@ -132,9 +131,9 @@ int main(void) {
 		// Create update atom (Y_opt)
 		for (i = 0; i < WK_ROWS; ++i) {
 			update_wk[i] =  MU_W * nu_opt[i] * scaling;
-			wk[i] = wk[i] + update_wk[i];
+			wk[i] += update_wk[i];
 			wk[i] = fmax(abs(wk[i])-BETA*MU_W, 0.0f) * sign(wk[i]);
-	        rms_wk = rms_wk + wk[i] * wk[i];
+	        rms_wk += wk[i] * wk[i];
 
 	        // Resetting/initialising the dual variable and update atom
 			update_wk[i] = 0.0f;
@@ -200,13 +199,13 @@ int main(void) {
 *
 */
 
-inline void adjustScaling(float scaling) {
+inline float adjust_scaling(float scaling) {
     if (scaling > GAMMA) {
-        scaling = (scaling - GAMMA) * ONE_OVER_DELTA;
+        return ((scaling - GAMMA) * ONE_OVER_DELTA);
     } else if (scaling < -GAMMA) {
-        scaling = (scaling + GAMMA) * ONE_OVER_DELTA;
+        return ((scaling + GAMMA) * ONE_OVER_DELTA);
     } else {
-        scaling = 0.0f;
+        return 0.0f;
     }
 }
 

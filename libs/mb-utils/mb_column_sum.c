@@ -1,6 +1,6 @@
 #include "mb_utils.h"
 
-void mb_sum(size_t rows, size_t cols, float matrix[rows][cols], float sum_vector[cols]) {
+void mb_column_sum(size_t rows, size_t cols, float matrix[rows][cols], float sum_vector[cols]) {
     float column_total;
 
     for (int j = 0; j < cols; ++j) {
