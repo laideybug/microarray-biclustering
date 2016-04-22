@@ -7,8 +7,12 @@ EXEPATH=$(dirname "$SCRIPT")
 
 LIBS="-L ${EXEPATH}/libs"
 INCS="-I ${EXEPATH}/libs/include -I ${EXEPATH}/include"
-#CFLAGS="-Wall -std=c99 -Os -funroll-loops -falign-loops=8 -falign-functions=8 -ffast-math -ffp-contract=fast -mfp-mode=round-nearest"
-CFLAGS="-Wall -std=c99 -Os"
+#Basic
+#CFLAGS="-Wall -std=c99 -Os"
+#Faster but less accurate?
+#CFLAGS="-Wall -std=c99 -Os -funroll-loops -falign-loops=8 -falign-functions=8 -ffast-math -mfp-mode=round-nearest"
+#Slower but more accurate?
+CFLAGS="-Wall -std=c99 -Os -funroll-loops -falign-loops=8 -falign-functions=8 -ffast-math"
 
 ESDK=${EPIPHANY_HOME}
 ELIBS="-L ${ESDK}/tools/host/lib"

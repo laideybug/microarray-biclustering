@@ -46,7 +46,7 @@ int main(void) {
 #endif
 
     // Address of this cores dual variable estimate
-    nu_k = (float *)(NU_K0_MEM_ADDR + (e_group_config.core_col * NU_MEM_OFFSET));
+    nu_k = (float *)(NU_K0_MEM_ADDR + e_group_config.core_col * NU_MEM_OFFSET);
 
     // Re-enable interrupts
     e_irq_attach(E_SYNC, sync_isr);

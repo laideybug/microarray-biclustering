@@ -28,7 +28,9 @@ int main(int argc, char *argv[]) {
     int previous_t;
 #else
     unsigned done[M_N], inf_clks, up_clks;
+#ifndef BATCH_DISTRIBUTED
     float xt_k[WK_ROWS];
+#endif
     int batch_toggle;
 #endif
 
@@ -74,7 +76,7 @@ int main(int argc, char *argv[]) {
     mb_fill_matrix_random(IN_ROWS, N, dictionary_w);
     mb_scalar_multiply(IN_ROWS, N, dictionary_w, 10.0f);
     mb_norm_matrix(IN_ROWS, N, dictionary_w);
-
+/*
     for (j = 0; j < IN_ROWS; ++j) {
         for (k = 0; k < N; ++k) {
             printf("%f ", dictionary_w[j][k]);
@@ -82,7 +84,7 @@ int main(int argc, char *argv[]) {
 
         printf("\n");
     }
-
+*/
     printf("Initialising network...\n");
 
     // Epiphany setup
@@ -114,9 +116,9 @@ int main(int argc, char *argv[]) {
 
             for (i = 0; i < WK_ROWS; ++i) {
 #ifdef BATCH_DISTRIBUTED
-                dictionary_wk_i[i] = *(dictionary_wk + i);
+                dictionary_wk_i[i] = dictionary_wk[i];
 #else
-                dictionary_wk_i[i] = *(dictionary_wk + (i + j*WK_ROWS));
+                dictionary_wk_i[i] = dictionary_wk[i + j*WK_ROWS];
 #endif
             }
 
@@ -256,13 +258,20 @@ int main(int argc, char *argv[]) {
         for (j = 0; j < M; ++j) {
             mb_get_matrix_column(IN_ROWS, IN_COLS, t+j*batch_toggle, input_data, xt);
 
-            for (k = 0; k < WK_ROWS; ++k) {
-                xt_k[k] = *(xt + (k + j*WK_ROWS));
+#ifndef BATCH_DISTRIBUTED
+            for (i = 0; i < WK_ROWS; ++i) {
+                xt_k[i] = xt[i + j*WK_ROWS];
             }
+#endif
 
             for (k = 0; k < N; ++k) {
+#ifndef BATCH_DISTRIBUTED
                 // "Stream" next data sample
                 e_write(&dev, j, k, XT_MEM_ADDR, &xt_k, WK_ROWS*sizeof(float));
+#else
+                // "Stream" next data sample
+                e_write(&dev, j, k, XT_MEM_ADDR, &xt, WK_ROWS*sizeof(float));
+#endif
                 // Clear done flag
                 e_write(&mbuf, 0, 0, (j*N+k)*sizeof(unsigned), &clr, sizeof(unsigned));
             }
@@ -311,7 +320,7 @@ int main(int argc, char *argv[]) {
         t_plus_one_reciprocol = 1.0f/(t+1);
 
         printf("\nMode: %s\n", MODE);
-        printf("Config: Master Node, %i x %i\n", M, N);
+        printf("Config: ARM, %i x %i\n", M, N);
         printf("-------------------------------\n");
 #ifdef BATCH_DISTRIBUTED
         printf("Processed input samples: %u - %u\n", t+1, t+batch_starts);
@@ -358,6 +367,13 @@ int main(int argc, char *argv[]) {
 
     for (i = 0; i < N; ++i) {
         mb_get_matrix_row(N, IN_COLS, i, scaling_matrix, scaling_k);
+/*
+        for (j = 0; j < 1; ++j) {
+            printf("%f ", scaling_k[j]);
+        }
+
+        printf("\n\n");
+*/
         norms[i].value = mb_norm_vector(IN_COLS, scaling_k);
         norms[i].index = i;
     }
@@ -367,12 +383,9 @@ int main(int argc, char *argv[]) {
     for (j = 0; j < IN_ROWS; ++j) {
         for (k = 0; k < N; ++k) {
             output_dict[j][k] = dictionary_w[j][norms[k].index];
-            printf("%f ", dictionary_w[j][k]);
         }
-
-        printf("\n");
     }
-
+/*
     for (j = 0; j < IN_ROWS; ++j) {
         for (k = 0; k < N; ++k) {
             printf("%f ", dictionary_w[j][k]);
@@ -380,7 +393,7 @@ int main(int argc, char *argv[]) {
 
         printf("\n");
     }
-
+*/
     // Output data to .dat file here
     output_file = fopen(OUT_PATH, "wb+");
 

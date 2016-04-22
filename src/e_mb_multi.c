@@ -78,8 +78,8 @@ int main(void) {
 #endif
 
 		for (reps = 0; reps < NUM_ITER; ++reps) {
-            *scaling_incomplete = 0.0f;
             scaling = 0.0f;
+            *scaling_incomplete = 0.0f;
 
 			for (i = 0; i < WK_ROWS; ++i) {
 				/* subgrad = (nu-xt)*minus_mu_over_N */
@@ -93,7 +93,7 @@ int main(void) {
                 if (j != e_group_config.core_row) {
                     slave_core_addr = (unsigned)e_get_global_address(j, e_group_config.core_col, p);
                     dest = (float *)(slave_core_addr + scaling_incomplete);
-                    e_memcopy(dest, scaling_incomplete, WK_ROWS*sizeof(float));
+                    e_memcopy(dest, scaling_incomplete, sizeof(float));
                 }
             }
 
@@ -142,8 +142,8 @@ int main(void) {
 		e_ctimer_set(E_CTIMER_0, E_CTIMER_MAX);
         e_ctimer_start(E_CTIMER_0, E_CTIMER_CLK);
 
-		*scaling_incomplete = 0.0f;
         scaling = 0.0f;
+        *scaling_incomplete = 0.0f;
 
 		for (i = 0; i < WK_ROWS; ++i) {
 			/* scaling = (my_W_transpose*nu); */
@@ -155,7 +155,7 @@ int main(void) {
             if (j != e_group_config.core_row) {
                 slave_core_addr = (unsigned)e_get_global_address(j, e_group_config.core_col, p);
                 dest = (float *)(slave_core_addr + scaling_incomplete);
-                e_memcopy(dest, scaling_incomplete, WK_ROWS*sizeof(float));
+                e_memcopy(dest, scaling_incomplete, sizeof(float));
             }
         }
 
@@ -175,8 +175,8 @@ int main(void) {
 		scaling = adjust_scaling(scaling);
 
 		// Update dictionary atom
-		*rms_wk_incomplete = 0.0f;
 		rms_wk = 0.0f;
+		*rms_wk_incomplete = 0.0f;
 
 		// Create update atom (Y_opt)
 		for (i = 0; i < WK_ROWS; ++i) {
@@ -195,7 +195,7 @@ int main(void) {
             if (j != e_group_config.core_row) {
                 slave_core_addr = (unsigned)e_get_global_address(j, e_group_config.core_col, p);
                 dest = (float *)(slave_core_addr + rms_wk_incomplete);
-                e_memcopy(dest, rms_wk_incomplete, WK_ROWS*sizeof(float));
+                e_memcopy(dest, rms_wk_incomplete, sizeof(float));
             }
         }
 
