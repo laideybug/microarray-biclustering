@@ -414,7 +414,15 @@ int main(int argc, char *argv[]) {
                 fprintf(output_file, "%f ", output_dict[j][k]);
             }
 
-            fprintf(output_file, "\n");
+            if (j == 19) {
+                fprintf(output_file, "\n\n");
+            } else if (j == 32) {
+                fprintf(output_file, "\n\n");
+            } else if (j == 49) {
+                fprintf(output_file, "\n\n");
+            } else {
+                fprintf(output_file, "\n");
+            }
         }
 
         fclose(output_file);
