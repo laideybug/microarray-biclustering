@@ -155,7 +155,7 @@ int main(void) {
 		for (i = 0; i < WK_ROWS; ++i) {
 			update_wk[i] =  MU_W * (nu_opt_k0[i] * nu_opt_k0[WK_ROWS] + nu_opt_k1[i] * nu_opt_k1[WK_ROWS] + nu_opt_k2[i] * nu_opt_k2[WK_ROWS] + nu_opt_k3[i] * nu_opt_k3[WK_ROWS]) * ONE_OVER_M_N;
 			wk[i] += update_wk[i];
-			wk[i] = fmax(abs(wk[i])-BETA*MU_W, 0.0f) * sign(wk[i]);
+			wk[i] = fmax(fabsf(wk[i])-BETA*MU_W, 0.0f) * sign(wk[i]);
 	        rms_wk += wk[i] * wk[i];
 
 	        // Resetting/initialising the dual variable and update atom

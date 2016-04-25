@@ -182,7 +182,7 @@ int main(void) {
 		for (i = 0; i < WK_ROWS; ++i) {
 			update_wk[i] =  MU_W * nu_opt[i] * scaling;
 			wk[i] += update_wk[i];
-			wk[i] = fmax(abs(wk[i])-BETA*MU_W, 0.0f) * sign(wk[i]);
+			wk[i] = fmax(fabsf(wk[i])-BETA*MU_W, 0.0f) * sign(wk[i]);
 	        *rms_wk_incomplete += wk[i] * wk[i];
 
 	        // Resetting/initialising the dual variable and update atom

@@ -12,7 +12,7 @@ INCS="-I ${EXEPATH}/libs/include -I ${EXEPATH}/include"
 #Faster but less accurate?
 #CFLAGS="-Wall -std=c99 -Os -funroll-loops -falign-loops=8 -falign-functions=8 -ffast-math -mfp-mode=round-nearest"
 #Slower but more accurate?
-CFLAGS="-Wall -std=c99 -Os -funroll-loops -falign-loops=8 -falign-functions=8 -ffast-math"
+CFLAGS="-Wall -std=c99 -Os -funroll-loops -falign-loops=8 -falign-functions=8"
 
 ESDK=${EPIPHANY_HOME}
 ELIBS="-L ${ESDK}/tools/host/lib"
