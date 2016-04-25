@@ -61,13 +61,13 @@ int main(void) {
 #endif
 
     while (1) {
-    	timer_value_0 = 0;
-        timer_value_1 = 0;
-
 #ifdef USE_MASTER_NODE
         // Put core in idle state
         __asm__ __volatile__("idle");
 #endif
+
+        timer_value_0 = 0;
+        timer_value_1 = 0;
 
         // Set timers for benchmarking
         e_ctimer_set(E_CTIMER_0, E_CTIMER_MAX);

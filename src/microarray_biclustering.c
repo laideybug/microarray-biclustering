@@ -415,11 +415,11 @@ int main(int argc, char *argv[]) {
             }
 
             if (j == 19) {
-                fprintf(output_file, "\n\n");
+                fprintf(output_file, "\n\n\n");
             } else if (j == 32) {
-                fprintf(output_file, "\n\n");
+                fprintf(output_file, "\n\n\n");
             } else if (j == 49) {
-                fprintf(output_file, "\n\n");
+                fprintf(output_file, "\n\n\n");
             } else {
                 fprintf(output_file, "\n");
             }

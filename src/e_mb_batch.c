@@ -66,17 +66,17 @@ int main(void) {
 #endif
 
     while (1) {
+#ifdef USE_MASTER_NODE
+        // Put core in idle state
+        __asm__ __volatile__("idle");
+#endif
+
         timer_value_0 = 0;
         timer_value_1 = 0;
 
         // Set timers for benchmarking
         e_ctimer_set(E_CTIMER_0, E_CTIMER_MAX);
         e_ctimer_start(E_CTIMER_0, E_CTIMER_CLK);
-
-#ifdef USE_MASTER_NODE
-        // Put core in idle state
-        __asm__ __volatile__("idle");
-#endif
 
 		for (reps = 0; reps < NUM_ITER; ++reps) {
             scaling = 0.0f;

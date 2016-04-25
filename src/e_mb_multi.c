@@ -8,7 +8,6 @@
 
 float adjust_scaling(float scaling);
 float sign(float value);
-void sync_isr(int x);
 
 int main(void) {
 	unsigned  *done_flag, *inf_clks, *up_clks, *p, i, j, reps, slave_core_addr, out_mem_offset, timer_value_0, timer_value_1;
@@ -52,11 +51,6 @@ int main(void) {
     // Address of this cores incomplete rms value
     rms_wk_incomplete = (float *)(INC_RMS_MEM_ADDR + e_group_config.core_row * sizeof(float));
 
-    // Re-enable interrupts
-    e_irq_attach(E_SYNC, sync_isr);
-    e_irq_mask(E_SYNC, E_FALSE);
-    e_irq_global_mask(E_FALSE);
-
     // Initialise barriers
     e_barrier_init(barriers, tgt_bars);
 
@@ -65,17 +59,17 @@ int main(void) {
 #endif
 
     while (1) {
+#ifdef USE_MASTER_NODE
+        // Put core in idle state
+        __asm__ __volatile__("idle");
+#endif
+
         timer_value_0 = 0;
         timer_value_1 = 0;
 
         // Set timers for benchmarking
         e_ctimer_set(E_CTIMER_0, E_CTIMER_MAX);
         e_ctimer_start(E_CTIMER_0, E_CTIMER_CLK);
-
-#ifdef USE_MASTER_NODE
-        // Put core in idle state
-        __asm__ __volatile__("idle");
-#endif
 
 		for (reps = 0; reps < NUM_ITER; ++reps) {
             scaling = 0.0f;
@@ -238,11 +232,6 @@ int main(void) {
 
 	   	// Release the mutex lock
 	   	_e_global_mutex_unlock(MASTER_NODE_ROW, MASTER_NODE_COL, mutex);
-
-        // The last node to update sends an interrupt to master node
-	   	if (done_flag_counter == M_N) {
-            _e_global_address_irq_set(MASTER_NODE_ROW, MASTER_NODE_COL, E_SYNC);
-	   	}
 #else
         // Write benchmark values
         (*(inf_clks)) = timer_value_0;
@@ -296,17 +285,4 @@ inline float sign(float value) {
 	} else {
 		return 0.0f;
 	}
-}
-
-/*
-* Function: sync_isr
-* ------------------
-* Override sync function
-*
-* x: arbitrary value
-*
-*/
-
-inline void __attribute__((interrupt)) sync_isr(int x) {
-    return;
 }
