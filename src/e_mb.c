@@ -64,14 +64,14 @@ int main(void) {
     	timer_value_0 = 0;
         timer_value_1 = 0;
 
-        // Set timers for benchmarking
-        e_ctimer_set(E_CTIMER_0, E_CTIMER_MAX);
-        e_ctimer_start(E_CTIMER_0, E_CTIMER_CLK);
-
 #ifdef USE_MASTER_NODE
         // Put core in idle state
         __asm__ __volatile__("idle");
 #endif
+
+        // Set timers for benchmarking
+        e_ctimer_set(E_CTIMER_0, E_CTIMER_MAX);
+        e_ctimer_start(E_CTIMER_0, E_CTIMER_CLK);
 
         for (reps = 0; reps < NUM_ITER; ++reps) {
             scaling = 0.0f;
@@ -132,7 +132,7 @@ int main(void) {
         for (i = 0; i < WK_ROWS; ++i) {
             update_wk[i] =  MU_W * nu_opt[i] * scaling;
             wk[i] += update_wk[i];
-            wk[i] = fabsf(abs(wk[i])-BETA*MU_W, 0.0f) * sign(wk[i]);
+            wk[i] = fmax(fabsf(wk[i])-BETA*MU_W, 0.0f) * sign(wk[i]);
             rms_wk += wk[i] * wk[i];
 
             // Resetting/initialising the dual variable and update atom
@@ -166,11 +166,6 @@ int main(void) {
 
         // Release the mutex lock
         _e_global_mutex_unlock(MASTER_NODE_ROW, MASTER_NODE_COL, mutex);
-
-        // The last node to update sends an interrupt to master node
-        if (done_flag_counter == M_N) {
-            _e_global_address_irq_set(MASTER_NODE_ROW, MASTER_NODE_COL, E_SYNC);
-        }
 #else
         // Write benchmark values
         (*(inf_clks)) = timer_value_0;

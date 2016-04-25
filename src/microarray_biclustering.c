@@ -19,19 +19,18 @@ int cmp(const void *a, const void *b);
 
 int main(int argc, char *argv[]) {
     unsigned current_row, current_col, i, j, k, all_done, avg_inf_clks, avg_up_clks, total_inf_clks, total_up_clks, clr;
-    float xt[IN_ROWS], input_data[IN_ROWS][IN_COLS], dictionary_w[IN_ROWS][N], dictionary_wk[IN_ROWS], dictionary_wk_i[WK_ROWS], output_dict[IN_ROWS][N], update_wk[WK_ROWS], dual_var[WK_ROWS], scaling_matrix[N][IN_COLS], scaling_k[IN_COLS], scaling_vals[BATCH_STARTS_N], data_point, secs, t_plus_one_reciprocol;
-    int t, batch_starts;
+    float xt[IN_ROWS], input_data[IN_ROWS][IN_COLS], dictionary_w[IN_ROWS][N], dictionary_wk[IN_ROWS], dictionary_wk_i[WK_ROWS], output_dict[IN_ROWS][N], update_wk[WK_ROWS], dual_var[WK_ROWS], scaling_matrix[N][IN_COLS], scaling_k[IN_COLS], scaling_vals[BATCH_STARTS_N], data_point, secs, t_reciprocol;
+    int t, batch_starts, batch_toggle;
     struct fl_ind norms[N];
     FILE *input_file, *output_file;
 #ifdef USE_MASTER_NODE
-    unsigned masternode_clks, section_clks;
+    unsigned masternode_clks;
     int previous_t;
 #else
     unsigned done[M_N], inf_clks, up_clks;
 #ifndef BATCH_DISTRIBUTED
     float xt_k[WK_ROWS];
 #endif
-    int batch_toggle;
 #endif
 
     // Seed the random number generator
@@ -167,9 +166,15 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    previous_t = -1;
     secs = 0.0f;
+#ifdef BATCH_DISTRIBUTED
+    batch_starts = 1;
+    batch_toggle = 0;
+    previous_t = 0;
+#else
     batch_starts = BATCH_STARTS;
+    previous_t = -1;
+#endif
 
     // Start/wake workgroup
     e_start_group(&dev_master);
@@ -183,19 +188,19 @@ int main(int argc, char *argv[]) {
         e_read(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float) + (2*sizeof(unsigned)), &total_inf_clks, sizeof(unsigned));
         e_read(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float) + (3*sizeof(unsigned)), &total_up_clks, sizeof(unsigned));
         e_read(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float) + (4*sizeof(unsigned)), &masternode_clks, sizeof(unsigned));
-        e_read(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float) + (5*sizeof(unsigned)), &section_clks, sizeof(unsigned));
-        e_read(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float) + (6*sizeof(unsigned)), &scaling_vals, BATCH_STARTS_N*sizeof(float));
+        e_read(&mbuf, 0, 0, IN_ROWS*IN_COLS*sizeof(float) + (5*sizeof(unsigned)), &scaling_vals, BATCH_STARTS_N*sizeof(float));
 
         if (t - previous_t) {
             avg_inf_clks = (unsigned)(total_inf_clks * ONE_OVER_M_N);
             avg_up_clks = (unsigned)(total_up_clks * ONE_OVER_M_N);
             previous_t = t;
             secs += masternode_clks * ONE_OVER_E_CYCLES;
-            t_plus_one_reciprocol = 1.0f/(t+1);
-
 #ifdef BATCH_DISTRIBUTED
-            if (IN_COLS - t == 1) batch_starts = 1;
+            t_reciprocol = 1.0f/t;
+#else
+            t_reciprocol = 1.0f/(t+1);
 #endif
+
             // Collect scaling values
             for (j = 0; j < batch_starts; ++j) {
                 for (k = 0; k < N; ++k) {
@@ -207,7 +212,7 @@ int main(int argc, char *argv[]) {
             printf("Config: Master Node, %i x %i\n", M, N);
             printf("---------------------------------------\n");
 #ifdef BATCH_DISTRIBUTED
-            printf("Processed input samples: %u - %u\n", t+1, t+batch_starts);
+            printf("Processed input samples: %u - %u\n", t, t+batch_starts*batch_toggle);
 #else
             printf("Processed input sample: %u\n", t+1);
 #endif
@@ -216,13 +221,19 @@ int main(int argc, char *argv[]) {
             printf("Average clock cycles for update step: %u clock cycles\n", avg_up_clks);
             printf("Average network speed of update step: %.6f seconds\n", avg_up_clks * ONE_OVER_E_CYCLES);
             printf("Master node clock cycles: %u clock cycles\n", masternode_clks);
-            printf("Section clock cycles: %u clock cycles\n", section_clks);
             printf("-------------------------------\n");
+#ifdef BATCH_DISTRIBUTED
             printf("Percent complete: %.2f%%\n", (t+1)*100.0f*ONE_OVER_IN_COLS);
-            printf("Average speed: %.6f seconds/sample\n", secs*t_plus_one_reciprocol);
+#else
+            printf("Percent complete: %.2f%%\n", t*100.0f*ONE_OVER_IN_COLS;
+#endif
+            printf("Average speed: %.6f seconds/sample\n", secs*t_reciprocol);
             printf("Time elapsed: %.2f seconds\n", secs);
-            printf("Total time estimate: %.2f seconds\n", secs*t_plus_one_reciprocol*IN_COLS);
-            printf("Remaining time estimate: %.2f seconds\n\n", secs*t_plus_one_reciprocol*IN_COLS - secs);
+            printf("Total time estimate: %.2f seconds\n", secs*t_reciprocol*IN_COLS);
+            printf("Remaining time estimate: %.2f seconds\n\n", secs*t_reciprocol*IN_COLS - secs);
+
+            batch_starts = BATCH_STARTS;
+            batch_toggle = 1;
         }
 
         if (all_done == 1) {
@@ -317,7 +328,7 @@ int main(int argc, char *argv[]) {
 
         gettimeofday(&end, NULL);
         secs = ((end.tv_sec + end.tv_usec * 0.000001) - (start.tv_sec + start.tv_usec * 0.000001));
-        t_plus_one_reciprocol = 1.0f/(t+1);
+        t_reciprocol = 1.0f/(t+1);
 
         printf("\nMode: %s\n", MODE);
         printf("Config: ARM, %i x %i\n", M, N);
@@ -333,10 +344,10 @@ int main(int argc, char *argv[]) {
         printf("Average network speed of update step: %.6f seconds\n", avg_up_clks * ONE_OVER_E_CYCLES);
         printf("-------------------------------\n");
         printf("Percent complete: %.2f%%\n", (t+1)*100.0f*ONE_OVER_IN_COLS);
-        printf("Average speed: %.6f seconds/sample\n", secs*t_plus_one_reciprocol);
+        printf("Average speed: %.6f seconds/sample\n", secs*t_reciprocol);
         printf("Time elapsed: %.2f seconds\n", secs);
-        printf("Total time: %.2f seconds\n", secs*t_plus_one_reciprocol*IN_COLS);
-        printf("Remaining time: %.2f seconds\n\n", secs*t_plus_one_reciprocol*IN_COLS - secs);
+        printf("Total time: %.2f seconds\n", secs*t_reciprocol*IN_COLS);
+        printf("Remaining time: %.2f seconds\n\n", secs*t_reciprocol*IN_COLS - secs);
     }
 
 #endif

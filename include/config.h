@@ -11,7 +11,7 @@
 //#define MULTI_DISTRIBUTED
 
 // Network configuration options - comment out as needed
-#define USE_MASTER_NODE
+//#define USE_MASTER_NODE
 //#define USE_DMA
 
 /*==============================================*/

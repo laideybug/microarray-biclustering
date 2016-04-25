@@ -3,11 +3,9 @@
 #include "_e_lib_extended.h"
 #include "common.h"
 
-void sync_isr(int x);
-
 int main(void) {
-	unsigned *all_done_flag, *total_inf_clks, *total_up_clks, *section_clks, *slave_ready_flag, *slave_done_counter, *slave_inf_clks, *slave_up_clks, *masternode_clks, *p, slave_core_addr, t, j, k, all_ready, inf_clks, up_clks, timer_value_0, timer_value_1;
-	float *xt, *dest, *slave_scaling_vals, *scaling_vals;
+	unsigned *all_done_flag, *total_inf_clks, *total_up_clks, *slave_ready_flag, *slave_done_counter, *slave_inf_clks, *slave_up_clks, *masternode_clks, *p, slave_done_count, slave_core_addr, t, j, k, all_ready, inf_clks, up_clks, timer_value_0;
+	float *xt, *next_sample, *dest, *slave_scaling_vals, *scaling_vals;
 	int *sample_no;
     e_mutex_t *mutex;
 
@@ -16,13 +14,17 @@ int main(void) {
     total_inf_clks = (unsigned *)(SHMEM_ADDR + IN_ROWS*IN_COLS*sizeof(float) + 2*sizeof(unsigned));
     total_up_clks = (unsigned *)(SHMEM_ADDR + IN_ROWS*IN_COLS*sizeof(float) + 3*sizeof(unsigned));
     masternode_clks = (unsigned *)(SHMEM_ADDR + IN_ROWS*IN_COLS*sizeof(float) + 4*sizeof(unsigned));
-    section_clks = (unsigned *)(SHMEM_ADDR + IN_ROWS*IN_COLS*sizeof(float) + 5*sizeof(unsigned));
-    scaling_vals = (float *)(SHMEM_ADDR + IN_ROWS*IN_COLS*sizeof(float) + 6*sizeof(unsigned));
+    scaling_vals = (float *)(SHMEM_ADDR + IN_ROWS*IN_COLS*sizeof(float) + 5*sizeof(unsigned));
 
+    xt = (float *)MASTER_XT_MEM_ADDR;
+    next_sample = (float *)SHMEM_ADDR;
     slave_done_counter = (unsigned *)DONE_MEM_ADDR;
     slave_scaling_vals = (float *)SCAL_MEM_ADDR;
     mutex = (int *)DONE_MUTEX_MEM_ADDR;
     p = CLEAR_FLAG;
+
+    // Copy first sample to node memory
+    e_memcopy(xt, next_sample, WK_ROWS*sizeof(float));
 
     _e_global_mutex_init(MASTER_NODE_ROW, MASTER_NODE_COL, mutex, NULL);
 
@@ -32,11 +34,6 @@ int main(void) {
     (*(total_inf_clks)) = 0;
     (*(total_up_clks)) = 0;
     (*(masternode_clks)) = 0;
-    (*(section_clks)) = 0;
-
-    e_irq_attach(E_SYNC, sync_isr);
-    e_irq_mask(E_SYNC, E_FALSE);
-    e_irq_global_mask(E_FALSE);
 
     while (1) {
         all_ready = 0;
@@ -55,31 +52,29 @@ int main(void) {
         e_ctimer_set(E_CTIMER_0, E_CTIMER_MAX);
         e_ctimer_start(E_CTIMER_0, E_CTIMER_CLK);
 
-		xt = (float *)(SHMEM_ADDR + t*IN_ROWS*sizeof(float));
+        slave_done_count = 0;
+        *slave_done_counter = 0;
 
         for (j = NETWORK_ORIGIN_ROW; j < M + NETWORK_ORIGIN_ROW; ++j) {
             for (k = NETWORK_ORIGIN_COL; k < N + NETWORK_ORIGIN_COL; ++k) {
                 slave_core_addr = (unsigned)_e_get_global_address_on_chip(j, k, p);
                 dest = (float *)(slave_core_addr + XT_MEM_ADDR);
                 e_memcopy(dest, xt, WK_ROWS*sizeof(float));
-            }
-        }
-
-        *slave_done_counter = 0;
-
-        for (j = NETWORK_ORIGIN_ROW; j < M + NETWORK_ORIGIN_ROW; ++j) {
-            for (k = NETWORK_ORIGIN_COL; k < N + NETWORK_ORIGIN_COL; ++k) {
                 _e_global_address_irq_set(j, k, E_SYNC);
             }
         }
 
-        e_ctimer_set(E_CTIMER_1, E_CTIMER_MAX);
-        e_ctimer_start(E_CTIMER_1, E_CTIMER_CLK);
+        if (IN_COLS - t != 1) {
+            next_sample = (float *)(SHMEM_ADDR + (t+1)*WK_ROWS*sizeof(float));
+            e_memcopy(xt, next_sample, WK_ROWS*sizeof(float));
+        }
 
-        // Put core in idle state while waiting for signal from network
-        __asm__ __volatile__("idle");
-
-        timer_value_1 = E_CTIMER_MAX - e_ctimer_stop(E_CTIMER_1);
+        // Wait for all slaves to finish
+        while (slave_done_count != M_N) {
+            _e_global_mutex_lock(MASTER_NODE_ROW, MASTER_NODE_COL, mutex);
+            slave_done_count = *slave_done_counter;
+            _e_global_mutex_unlock(MASTER_NODE_ROW, MASTER_NODE_COL, mutex);
+        }
 
         inf_clks = 0;
         up_clks = 0;
@@ -101,7 +96,6 @@ int main(void) {
         (*(total_inf_clks)) = inf_clks;
         (*(total_up_clks)) = up_clks;
         (*(masternode_clks)) = timer_value_0;
-        (*(section_clks)) = timer_value_1;
         (*(sample_no)) = t;
 	}
 
@@ -112,17 +106,4 @@ int main(void) {
     __asm__ __volatile__("idle");
 
     return EXIT_SUCCESS;
-}
-
-/*
-* Function: sync_isr
-* ------------------
-* Override sync function
-*
-* x: arbitrary value
-*
-*/
-
-inline void __attribute__((interrupt)) sync_isr(int x) {
-    return;
 }

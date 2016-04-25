@@ -48,12 +48,13 @@
 #define NU_MEM_OFFSET       0x0230
 
 // Master node macros and addresses
-#define MASTER_BENCH_NUM    18		// The max number of benchmark values returned by the master node
-#define INF_CLKS_MEM_ADDR   0x4000
-#define UP_CLKS_MEM_ADDR    0x4200
-#define SCAL_MEM_ADDR       0x4400
-#define READY_MEM_ADDR      0x4600
-#define DONE_MEM_ADDR       0x4800
-#define DONE_MUTEX_MEM_ADDR 0x5000
+#define MASTER_BENCH_NUM    17		// The max number of benchmark values returned by the master node
+#define MASTER_XT_MEM_ADDR  0x4000
+#define INF_CLKS_MEM_ADDR   0x5000
+#define UP_CLKS_MEM_ADDR    0x5100
+#define SCAL_MEM_ADDR       0x5200
+#define READY_MEM_ADDR      0x5300
+#define DONE_MEM_ADDR       0x5400
+#define DONE_MUTEX_MEM_ADDR 0x5500
 
 #endif // COMMON_H_INCLUDED
