@@ -8,6 +8,7 @@
 
 float adjust_scaling(float scaling);
 float sign(float value);
+void sync_isr(int x);
 
 int main(void) {
 	unsigned  *done_flag, *inf_clks, *up_clks, *p, i, j, reps, slave_core_addr, out_mem_offset, timer_value_0, timer_value_1;
@@ -50,6 +51,11 @@ int main(void) {
     scaling_incomplete = (float *)(INC_SCAL_MEM_ADDR + e_group_config.core_row * sizeof(float));
     // Address of this cores incomplete rms value
     rms_wk_incomplete = (float *)(INC_RMS_MEM_ADDR + e_group_config.core_row * sizeof(float));
+
+    // Re-enable interrupts
+    e_irq_attach(E_SYNC, sync_isr);
+    e_irq_mask(E_SYNC, E_FALSE);
+    e_irq_global_mask(E_FALSE);
 
     // Initialise barriers
     e_barrier_init(barriers, tgt_bars);
@@ -285,4 +291,17 @@ inline float sign(float value) {
 	} else {
 		return 0.0f;
 	}
+}
+
+/*
+* Function: sync_isr
+* ------------------
+* Override sync function
+*
+* x: arbitrary value
+*
+*/
+
+inline void __attribute__((interrupt)) sync_isr(int x) {
+    return;
 }

@@ -20,14 +20,18 @@ int cmp(const void *a, const void *b);
 int main(int argc, char *argv[]) {
     unsigned current_row, current_col, i, j, k, all_done, avg_inf_clks, avg_up_clks, total_inf_clks, total_up_clks, clr;
     float xt[IN_ROWS], input_data[IN_ROWS][IN_COLS], dictionary_w[IN_ROWS][N], dictionary_wk[IN_ROWS], dictionary_wk_i[WK_ROWS], output_dict[IN_ROWS][N], update_wk[WK_ROWS], dual_var[WK_ROWS], scaling_matrix[N][IN_COLS], scaling_k[IN_COLS], scaling_vals[BATCH_STARTS_N], data_point, secs, t_reciprocol;
-    int t, batch_starts, batch_toggle;
+    int t, batch_starts;
     struct fl_ind norms[N];
     FILE *input_file, *output_file;
+#ifdef BATCH_DISTRIBUTED
+    int batch_toggle;
+#endif
 #ifdef USE_MASTER_NODE
     unsigned masternode_clks;
     int previous_t;
 #else
     unsigned done[M_N], inf_clks, up_clks;
+    int batch_toggle;
 #ifndef BATCH_DISTRIBUTED
     float xt_k[WK_ROWS];
 #endif
@@ -225,15 +229,16 @@ int main(int argc, char *argv[]) {
 #ifdef BATCH_DISTRIBUTED
             printf("Percent complete: %.2f%%\n", (t+1)*100.0f*ONE_OVER_IN_COLS);
 #else
-            printf("Percent complete: %.2f%%\n", t*100.0f*ONE_OVER_IN_COLS;
+            printf("Percent complete: %.2f%%\n", t*100.0f*ONE_OVER_IN_COLS);
 #endif
             printf("Average speed: %.6f seconds/sample\n", secs*t_reciprocol);
             printf("Time elapsed: %.2f seconds\n", secs);
             printf("Total time estimate: %.2f seconds\n", secs*t_reciprocol*IN_COLS);
             printf("Remaining time estimate: %.2f seconds\n\n", secs*t_reciprocol*IN_COLS - secs);
-
+#ifdef BATCH_DISTRIBUTED
             batch_starts = BATCH_STARTS;
             batch_toggle = 1;
+#endif
         }
 
         if (all_done == 1) {
