@@ -216,7 +216,7 @@ int main(int argc, char *argv[]) {
             printf("Config: Master Node, %i x %i\n", M, N);
             printf("---------------------------------------\n");
 #ifdef BATCH_DISTRIBUTED
-            printf("Processed input samples: %u - %u\n", t, t+batch_starts*batch_toggle);
+            printf("Processed input samples: %u - %u\n", t-3*batch_toggle, t);
 #else
             printf("Processed input sample: %u\n", t+1);
 #endif
@@ -226,11 +226,7 @@ int main(int argc, char *argv[]) {
             printf("Average network speed of update step: %.6f seconds\n", avg_up_clks * ONE_OVER_E_CYCLES);
             printf("Master node clock cycles: %u clock cycles\n", masternode_clks);
             printf("-------------------------------\n");
-#ifdef BATCH_DISTRIBUTED
-            printf("Percent complete: %.2f%%\n", (t+1)*100.0f*ONE_OVER_IN_COLS);
-#else
             printf("Percent complete: %.2f%%\n", t*100.0f*ONE_OVER_IN_COLS);
-#endif
             printf("Average speed: %.6f seconds/sample\n", secs*t_reciprocol);
             printf("Time elapsed: %.2f seconds\n", secs);
             printf("Total time estimate: %.2f seconds\n", secs*t_reciprocol*IN_COLS);

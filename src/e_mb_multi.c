@@ -303,6 +303,6 @@ inline float sign(float value) {
 *
 */
 
-inline void __attribute__((interrupt)) sync_isr(int x) {
+void __attribute__((interrupt)) sync_isr(int x) {
     return;
 }

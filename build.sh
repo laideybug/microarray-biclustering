@@ -9,9 +9,7 @@ LIBS="-L ${EXEPATH}/libs"
 INCS="-I ${EXEPATH}/libs/include -I ${EXEPATH}/include"
 #Basic
 #CFLAGS="-Wall -std=c99 -Os"
-#Faster but less accurate?
-#CFLAGS="-Wall -std=c99 -Os -funroll-loops -falign-loops=8 -falign-functions=8 -ffast-math -mfp-mode=round-nearest"
-#Slower but more accurate?
+#Faster
 CFLAGS="-Wall -std=c99 -Os -funroll-loops -falign-loops=8 -falign-functions=8"
 
 ESDK=${EPIPHANY_HOME}

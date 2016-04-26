@@ -129,7 +129,7 @@ int main(void) {
         // Update dictionary atom
         rms_wk = 0.0f;
 
-        // Create update atom (Y_opt)
+        // Create update atom
         for (i = 0; i < WK_ROWS; ++i) {
             update_wk[i] =  MU_W * nu_opt[i] * scaling;
             wk[i] += update_wk[i];
@@ -234,6 +234,6 @@ inline float sign(float value) {
 *
 */
 
-inline void __attribute__((interrupt)) sync_isr(int x) {
+void __attribute__((interrupt)) sync_isr(int x) {
     return;
 }
