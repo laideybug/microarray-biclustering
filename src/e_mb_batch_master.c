@@ -4,8 +4,10 @@
 #include "common.h"
 
 int main(void) {
-	unsigned *all_done_flag, *total_inf_clks, *total_up_clks, *slave_ready_flag, *slave_done_counter, *slave_inf_clks, *slave_up_clks, *masternode_clks, *p, slave_done_count, slave_core_addr, t, j, k, all_ready, inf_clks, up_clks, timer_value_0;
-	float *xt, *next_sample, *dest, *slave_scaling_vals, *scaling_vals;
+	unsigned *all_done_flag, *total_inf_clks, *total_up_clks, *masternode_clks, *p, slave_core_addr, t, j, k, all_ready, inf_clks, up_clks, timer_value_0;
+	volatile unsigned *slave_ready_flag, *slave_inf_clks, *slave_up_clks, *slave_done_counter, slave_done_count;
+	float *xt, *next_sample, *dest;
+	volatile float *slave_scaling_vals, *scaling_vals;
 	int *sample_no;
 	e_mutex_t *mutex;
 

@@ -12,7 +12,8 @@ void sync_isr(int x);
 
 int main(void) {
 	unsigned  *done_flag, *inf_clks, *up_clks, *p, i, j, reps, slave_core_addr, out_mem_offset, timer_value_0, timer_value_1;
-	float *xt, *wk, *update_wk, *nu_opt, *nu_k, *nu_k0, *nu_k1, *nu_k2, *dest, *scaling_val, *scaling_incomplete, *scaling_incomplete_k, *rms_wk_incomplete, *rms_wk_incomplete_k, subgrad[WK_ROWS], scaling, rms_wk, rms_wk_reciprocol;
+	float *wk, *update_wk, *nu_opt, *nu_k, *dest, *scaling_val, subgrad[WK_ROWS], scaling, rms_wk, rms_wk_reciprocol;
+    volatile float *xt, *nu_k0, *nu_k1, *nu_k2, *scaling_incomplete, *scaling_incomplete_k, *rms_wk_incomplete, *rms_wk_incomplete_k;
 #ifdef USE_MASTER_NODE
     unsigned *ready_flag, master_node_addr, done_flag_counter;
     e_mutex_t *mutex;
