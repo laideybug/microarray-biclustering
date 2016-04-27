@@ -23,9 +23,6 @@ int main(int argc, char *argv[]) {
     int t, batch_starts;
     struct fl_ind norms[N];
     FILE *input_file, *output_file;
-#ifdef BATCH_DISTRIBUTED
-    int batch_toggle;
-#endif
 #ifdef USE_MASTER_NODE
     unsigned masternode_clks;
     int previous_t;

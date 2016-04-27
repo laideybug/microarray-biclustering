@@ -12,7 +12,7 @@ void sync_isr(int x);
 
 int main(void) {
 	unsigned *inf_clks, *up_clks, *done_flag, *p, i, j, reps, slave_core_addr, out_mem_offset, timer_value_0, timer_value_1;
-	float *wk, *update_wk, *nu_opt, *nu_k, *dest, *scaling_val, scaling, minus_scaling_mu_2, subgrad[WK_ROWS], minus_mu_2, minus_mu_2_over_n, mu_w_over_mn, beta_mu_w, rms_wk, rms_wk_reciprocol;
+	float *wk, *update_wk, *nu_opt, *nu_k, *dest, *scaling_val, scaling, nu_k_avg, nu_opt_avg, minus_scaling_mu_2, subgrad[WK_ROWS], minus_mu_2, minus_mu_2_over_n, mu_w_over_mn, beta_mu_w, rms_wk, rms_wk_reciprocol;
     volatile float *xt, *nu_opt_k0, *nu_opt_k1, *nu_opt_k2, *nu_opt_k3, *nu_k0, *nu_k1, *nu_k2;
 #ifdef USE_MASTER_NODE
     unsigned *ready_flag, master_node_addr, done_flag_counter;
@@ -121,7 +121,8 @@ int main(void) {
 
 	    	// Average dual variable estimates
 			for (i = 0; i < WK_ROWS; ++i) {
-	            nu_opt[i] +=  subgrad[i] + ((nu_k0[i] + nu_k1[i] + nu_k2[i]) * ONE_OVER_N);
+                nu_k_avg = (nu_k0[i] + nu_k1[i] + nu_k2[i]) * ONE_OVER_N;
+	            nu_opt[i] += subgrad[i] + nu_k_avg;
 			}
 		}
 
@@ -137,7 +138,6 @@ int main(void) {
 		}
 
 		scaling = adjust_scaling(scaling);
-
 		nu_opt[WK_ROWS] = scaling;
 
 		// Exchange dual variable and scaling estimates along column
@@ -161,7 +161,8 @@ int main(void) {
 
 		// Create update atom (Y_opt)
 		for (i = 0; i < WK_ROWS; ++i) {
-			update_wk[i] =  (nu_opt_k0[i] * nu_opt_k0[WK_ROWS] + nu_opt_k1[i] * nu_opt_k1[WK_ROWS] + nu_opt_k2[i] * nu_opt_k2[WK_ROWS] + nu_opt_k3[i] * nu_opt_k3[WK_ROWS]) * mu_w_over_mn;
+            nu_opt_avg = (nu_opt_k0[i] * nu_opt_k0[WK_ROWS] + nu_opt_k1[i] * nu_opt_k1[WK_ROWS] + nu_opt_k2[i] * nu_opt_k2[WK_ROWS] + nu_opt_k3[i] * nu_opt_k3[WK_ROWS]);
+			update_wk[i] = nu_opt_avg * mu_w_over_mn;
 			wk[i] += update_wk[i];
 			wk[i] = fmax(fabsf(wk[i])-beta_mu_w, 0.0f) * sign(wk[i]);
 	        rms_wk += wk[i] * wk[i];
