@@ -12,8 +12,9 @@ void sync_isr(int x);
 
 int main(void) {
 	unsigned *inf_clks, *up_clks, *done_flag, *p, i, j, reps, slave_core_addr, out_mem_offset, timer_value_0, timer_value_1;
-	float *wk, *update_wk, *nu_opt, *nu_k, *dest, *scaling_val, scaling, nu_k_avg, nu_opt_avg, minus_scaling_mu_2, subgrad[WK_ROWS], minus_mu_2, minus_mu_2_over_n, mu_w_over_mn, beta_mu_w, rms_wk, rms_wk_reciprocol;
+	float *wk, *update_wk, *nu_opt, *nu_k, *dest, *scaling_val, scaling, minus_scaling_mu_2, subgrad[WK_ROWS], minus_mu_2, minus_mu_2_over_n, mu_w_over_mn, beta_mu_w, rms_wk;
     volatile float *xt, *nu_opt_k0, *nu_opt_k1, *nu_opt_k2, *nu_opt_k3, *nu_k0, *nu_k1, *nu_k2;
+    size_t nu_k_size, nu_opt_size;
 #ifdef USE_MASTER_NODE
     unsigned *ready_flag, master_node_addr, done_flag_counter;
     e_mutex_t *mutex;
@@ -40,7 +41,6 @@ int main(void) {
 	inf_clks = (unsigned *)(master_node_addr + INF_CLKS_MEM_ADDR + out_mem_offset);
     up_clks = (unsigned *)(master_node_addr + UP_CLKS_MEM_ADDR + out_mem_offset);
     scaling_val = (float *)(master_node_addr + SCAL_MEM_ADDR + out_mem_offset);
-
     mutex = (int *)DONE_MUTEX_MEM_ADDR;
 #else
     done_flag = (unsigned *)(SHMEM_ADDR + out_mem_offset);
@@ -58,6 +58,8 @@ int main(void) {
     minus_mu_2_over_n = minus_mu_2 * ONE_OVER_N;
     mu_w_over_mn = MU_W * ONE_OVER_M_N;
     beta_mu_w = BETA * MU_W;
+    nu_k_size = WK_ROWS*sizeof(float);
+    nu_opt_size = (WK_ROWS+1)*sizeof(float);
 
     // Re-enable interrupts
     e_irq_attach(E_SYNC, sync_isr);
@@ -76,13 +78,12 @@ int main(void) {
         // Put core in idle state
         __asm__ __volatile__("idle");
 #endif
-
-        timer_value_0 = 0;
-        timer_value_1 = 0;
-
         // Set timers for benchmarking
         e_ctimer_set(E_CTIMER_0, E_CTIMER_MAX);
         e_ctimer_start(E_CTIMER_0, E_CTIMER_CLK);
+
+        timer_value_0 = 0;
+        timer_value_1 = 0;
 
 		for (reps = 0; reps < NUM_ITER; ++reps) {
             scaling = 0.0f;
@@ -95,7 +96,6 @@ int main(void) {
 			}
 
 			scaling = adjust_scaling(scaling);
-
 			minus_scaling_mu_2 = scaling * minus_mu_2;
 
 			for (i = 0; i < WK_ROWS; ++i) {
@@ -108,21 +108,20 @@ int main(void) {
                 if (j != e_group_config.core_col) {
                     slave_core_addr = (unsigned)e_get_global_address(e_group_config.core_row, j, p);
                     dest = (float *)(slave_core_addr + nu_k);
-                    e_memcopy(dest, nu_k, WK_ROWS*sizeof(float));
+                    e_memcopy(dest, nu_k, nu_k_size);
                 }
             }
 
             timer_value_0 += E_CTIMER_MAX - e_ctimer_stop(E_CTIMER_0);
             e_ctimer_set(E_CTIMER_0, E_CTIMER_MAX);
 
-	    	// Synch with all other cores
+	    	// Sync with all other cores
             e_barrier(barriers, tgt_bars);
             e_ctimer_start(E_CTIMER_0, E_CTIMER_CLK);
 
 	    	// Average dual variable estimates
 			for (i = 0; i < WK_ROWS; ++i) {
-                nu_k_avg = (nu_k0[i] + nu_k1[i] + nu_k2[i]) * ONE_OVER_N;
-	            nu_opt[i] += subgrad[i] + nu_k_avg;
+	            nu_opt[i] += subgrad[i] + (nu_k0[i] + nu_k1[i] + nu_k2[i]) / N;
 			}
 		}
 
@@ -145,7 +144,7 @@ int main(void) {
             if (j != e_group_config.core_row) {
                 slave_core_addr = (unsigned)e_get_global_address(j, e_group_config.core_col, p);
                 dest = (float *)(slave_core_addr + nu_opt);
-                e_memcopy(dest, nu_opt, (WK_ROWS+1)*sizeof(float));
+                e_memcopy(dest, nu_opt, nu_opt_size);
             }
         }
 
@@ -161,8 +160,7 @@ int main(void) {
 
 		// Create update atom (Y_opt)
 		for (i = 0; i < WK_ROWS; ++i) {
-            nu_opt_avg = (nu_opt_k0[i] * nu_opt_k0[WK_ROWS] + nu_opt_k1[i] * nu_opt_k1[WK_ROWS] + nu_opt_k2[i] * nu_opt_k2[WK_ROWS] + nu_opt_k3[i] * nu_opt_k3[WK_ROWS]);
-			update_wk[i] = nu_opt_avg * mu_w_over_mn;
+			update_wk[i] = (nu_opt_k0[i] * nu_opt_k0[WK_ROWS] + nu_opt_k1[i] * nu_opt_k1[WK_ROWS] + nu_opt_k2[i] * nu_opt_k2[WK_ROWS] + nu_opt_k3[i] * nu_opt_k3[WK_ROWS]) * mu_w_over_mn;
 			wk[i] += update_wk[i];
 			wk[i] = fmax(fabsf(wk[i])-beta_mu_w, 0.0f) * sign(wk[i]);
 	        rms_wk += wk[i] * wk[i];
@@ -174,14 +172,11 @@ int main(void) {
 
 		// Reset shared scaling value
 		nu_opt[WK_ROWS] = 0.0f;
-
 		rms_wk = sqrtf(rms_wk);
 
 		if (rms_wk > 1.0f) {
-            rms_wk_reciprocol = 1.0f / rms_wk;
-
 			for (i = 0; i < WK_ROWS; ++i) {
-				wk[i] = wk[i] * rms_wk_reciprocol;
+				wk[i] = wk[i] / rms_wk;
 			}
 		}
 
@@ -201,11 +196,6 @@ int main(void) {
 
 	   	// Release the mutex lock
 	   	_e_global_mutex_unlock(MASTER_NODE_ROW, MASTER_NODE_COL, mutex);
-
-        // The last node to update sends an interrupt to master node
-	   	if (done_flag_counter == M_N) {
-            _e_global_address_irq_set(MASTER_NODE_ROW, MASTER_NODE_COL, E_SYNC);
-	   	}
 #else
         // Write benchmark values
         (*(inf_clks)) = timer_value_0;

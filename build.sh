@@ -7,9 +7,9 @@ EXEPATH=$(dirname "$SCRIPT")
 
 LIBS="-L ${EXEPATH}/libs"
 INCS="-I ${EXEPATH}/libs/include -I ${EXEPATH}/include"
-#Basic
+#Minimum
 #CFLAGS="-Wall -std=c99 -Os"
-#Faster
+#Optimised
 CFLAGS="-Wall -std=c99 -Os -funroll-loops -falign-loops=8 -falign-functions=8"
 
 ESDK=${EPIPHANY_HOME}

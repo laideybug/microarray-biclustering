@@ -20,7 +20,7 @@ int cmp(const void *a, const void *b);
 int main(int argc, char *argv[]) {
     unsigned current_row, current_col, i, j, k, all_done, avg_inf_clks, avg_up_clks, total_inf_clks, total_up_clks, clr;
     float xt[IN_ROWS], input_data[IN_ROWS][IN_COLS], dictionary_w[IN_ROWS][N], dictionary_wk[IN_ROWS], dictionary_wk_i[WK_ROWS], output_dict[IN_ROWS][N], update_wk[WK_ROWS], dual_var[WK_ROWS], scaling_matrix[N][IN_COLS], scaling_k[IN_COLS], scaling_vals[BATCH_STARTS_N], data_point, secs, t_reciprocol;
-    int t, batch_starts;
+    int t, batch_starts, batch_toggle;
     struct fl_ind norms[N];
     FILE *input_file, *output_file;
 #ifdef USE_MASTER_NODE
@@ -28,7 +28,6 @@ int main(int argc, char *argv[]) {
     int previous_t;
 #else
     unsigned done[M_N], inf_clks, up_clks;
-    int batch_toggle;
 #ifndef BATCH_DISTRIBUTED
     float xt_k[WK_ROWS];
 #endif
