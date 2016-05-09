@@ -12,7 +12,7 @@ void sync_isr(int x);
 
 int main(void) {
 	unsigned *inf_clks, *up_clks, *done_flag, *p, i, j, reps, slave_core_addr, out_mem_offset, timer_value_0, timer_value_1;
-	float *wk, *update_wk, *nu_opt, *nu_k, *dest, *scaling_val, scaling, minus_scaling_mu_2, subgrad[WK_ROWS], minus_mu_2, minus_mu_2_over_n, mu_w_over_mn, beta_mu_w, rms_wk;
+	float *wk, *update_wk, *nu_opt, *nu_k, *dest, *scaling_val, scaling, subgrad[WK_ROWS], minus_mu_2, minus_mu_2_over_n, mu_w_over_mn, minus_mu_2_scaling, beta_mu_w, rms_wk;
     volatile float *xt, *nu_opt_k0, *nu_opt_k1, *nu_opt_k2, *nu_opt_k3, *nu_k0, *nu_k1, *nu_k2;
     size_t nu_k_size, nu_opt_size;
 #ifdef USE_MASTER_NODE
@@ -55,8 +55,8 @@ int main(void) {
     nu_k = (float *)(NU_K0_MEM_ADDR + (e_group_config.core_col * NU_MEM_OFFSET));
 
     minus_mu_2 = MU_2 * -1.0f;
-    minus_mu_2_over_n = minus_mu_2 * ONE_OVER_N;
-    mu_w_over_mn = MU_W * ONE_OVER_M_N;
+    minus_mu_2_over_n = minus_mu_2 / N;
+    mu_w_over_mn = MU_W / M_N;
     beta_mu_w = BETA * MU_W;
     nu_k_size = WK_ROWS*sizeof(float);
     nu_opt_size = (WK_ROWS+1)*sizeof(float);
@@ -96,11 +96,11 @@ int main(void) {
 			}
 
 			scaling = adjust_scaling(scaling);
-			minus_scaling_mu_2 = scaling * minus_mu_2;
+			minus_mu_2_scaling = scaling * minus_mu_2;
 
 			for (i = 0; i < WK_ROWS; ++i) {
 				/* D * diagmat(scaling*my_minus_mu) */
-				nu_k[i] = wk[i] * minus_scaling_mu_2;
+				nu_k[i] = wk[i] * minus_mu_2_scaling;
 			}
 
 	        // Exchange dual variable estimates along row
@@ -151,7 +151,7 @@ int main(void) {
         timer_value_1 += E_CTIMER_MAX - e_ctimer_stop(E_CTIMER_0);
 		e_ctimer_set(E_CTIMER_0, E_CTIMER_MAX);
 
-        // Synch with all other cores
+        // Sync with all other cores
         e_barrier(barriers, tgt_bars);
         e_ctimer_start(E_CTIMER_0, E_CTIMER_CLK);
 
@@ -226,9 +226,9 @@ int main(void) {
 
 inline float adjust_scaling(float scaling) {
     if (scaling > GAMMA) {
-        return ((scaling - GAMMA) * ONE_OVER_DELTA);
-    } else if (scaling < -GAMMA) {
-        return ((scaling + GAMMA) * ONE_OVER_DELTA);
+        return ((scaling - GAMMA) / DELTA);
+    } else if (scaling < MINUS_GAMMA) {
+        return ((scaling + GAMMA) / DELTA);
     } else {
         return 0.0f;
     }

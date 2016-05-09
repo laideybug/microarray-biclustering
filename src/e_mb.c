@@ -12,8 +12,9 @@ void sync_isr(int x);
 
 int main(void) {
     unsigned *inf_clks, *up_clks, *done_flag, *p, i, j, reps, slave_core_addr, out_mem_offset, timer_value_0, timer_value_1;
-    float *wk, *update_wk, *nu_opt, *nu_k, *dest, *scaling_val, subgrad[WK_ROWS], scaling, rms_wk, rms_wk_reciprocol;
+    float *wk, *update_wk, *nu_opt, *nu_k, *dest, *scaling_val, minus_mu_2, minus_mu_2_over_n, beta_mu_w, mu_w_scaling, minus_mu_2_scaling, subgrad[WK_ROWS], scaling, rms_wk, rms_wk_reciprocol;
     volatile float *xt, *nu_k0, *nu_k1, *nu_k2;
+    size_t nu_k_size;
 #ifdef USE_MASTER_NODE
     unsigned *ready_flag, master_node_addr, done_flag_counter;
     e_mutex_t *mutex;
@@ -49,6 +50,11 @@ int main(void) {
     // Address of this cores dual variable estimate
     nu_k = (float *)(NU_K0_MEM_ADDR + e_group_config.core_col * NU_MEM_OFFSET);
 
+    minus_mu_2 = MU_2 * -1.0f;
+    minus_mu_2_over_n = minus_mu_2 / N;
+    beta_mu_w = BETA * MU_W;
+    nu_k_size = WK_ROWS*sizeof(float);
+
     // Re-enable interrupts
     e_irq_attach(E_SYNC, sync_isr);
     e_irq_mask(E_SYNC, E_FALSE);
@@ -66,29 +72,29 @@ int main(void) {
         // Put core in idle state
         __asm__ __volatile__("idle");
 #endif
-
-        timer_value_0 = 0;
-        timer_value_1 = 0;
-
         // Set timers for benchmarking
         e_ctimer_set(E_CTIMER_0, E_CTIMER_MAX);
         e_ctimer_start(E_CTIMER_0, E_CTIMER_CLK);
+
+        timer_value_0 = 0;
+        timer_value_1 = 0;
 
         for (reps = 0; reps < NUM_ITER; ++reps) {
             scaling = 0.0f;
 
             for (i = 0; i < WK_ROWS; ++i) {
                 /* subgrad = (nu-xt)*minus_mu_over_N */
-                subgrad[i] = (nu_opt[i] - xt[i]) * -MU_2 * ONE_OVER_N;
+                subgrad[i] = (nu_opt[i] - xt[i]) * minus_mu_2_over_n;
                 /* scaling = (my_W_transpose*nu) */
                 scaling += wk[i] * nu_opt[i];
             }
 
             scaling = adjust_scaling(scaling);
+            minus_mu_2_scaling = scaling * minus_mu_2;
 
             for (i = 0; i < WK_ROWS; ++i) {
                 /* D * diagmat(scaling*my_minus_mu) */
-                nu_k[i] = wk[i] * scaling * -MU_2;
+                nu_k[i] = wk[i] * minus_mu_2_scaling;
             }
 
             // Exchange dual variable estimates along row
@@ -96,20 +102,20 @@ int main(void) {
                 if (j != e_group_config.core_col) {
                     slave_core_addr = (unsigned)e_get_global_address(e_group_config.core_row, j, p);
                     dest = (float *)(slave_core_addr + nu_k);
-                    e_memcopy(dest, nu_k, WK_ROWS*sizeof(float));
+                    e_memcopy(dest, nu_k, nu_k_size);
                 }
             }
 
             timer_value_0 += E_CTIMER_MAX - e_ctimer_stop(E_CTIMER_0);
             e_ctimer_set(E_CTIMER_0, E_CTIMER_MAX);
 
-            // Synch with all other cores
+            // Sync with all other cores
             e_barrier(barriers, tgt_bars);
             e_ctimer_start(E_CTIMER_0, E_CTIMER_CLK);
 
             // Average dual variable estimates
             for (i = 0; i < WK_ROWS; ++i) {
-                nu_opt[i] += subgrad[i] + ((nu_k0[i] + nu_k1[i] + nu_k2[i]) * ONE_OVER_N);
+                nu_opt[i] += subgrad[i] + (nu_k0[i] + nu_k1[i] + nu_k2[i]) / N;
             }
         }
 
@@ -128,12 +134,13 @@ int main(void) {
 
         // Update dictionary atom
         rms_wk = 0.0f;
+        mu_w_scaling = MU_W * scaling;
 
         // Create update atom
         for (i = 0; i < WK_ROWS; ++i) {
-            update_wk[i] =  MU_W * nu_opt[i] * scaling;
+            update_wk[i] = nu_opt[i] * mu_w_scaling;
             wk[i] += update_wk[i];
-            wk[i] = fmax(fabsf(wk[i])-BETA*MU_W, 0.0f) * sign(wk[i]);
+            wk[i] = fmax(fabsf(wk[i])-beta_mu_w, 0.0f) * sign(wk[i]);
             rms_wk += wk[i] * wk[i];
 
             // Resetting/initialising the dual variable and update atom
@@ -144,10 +151,8 @@ int main(void) {
         rms_wk = sqrtf(rms_wk);
 
         if (rms_wk > 1.0f) {
-            rms_wk_reciprocol = 1.0f / rms_wk;
-
             for (i = 0; i < WK_ROWS; ++i) {
-                wk[i] = wk[i] * rms_wk_reciprocol;
+                wk[i] = wk[i] / rms_wk;
             }
         }
 
@@ -197,9 +202,9 @@ int main(void) {
 
 inline float adjust_scaling(float scaling) {
     if (scaling > GAMMA) {
-        return ((scaling - GAMMA) * ONE_OVER_DELTA);
-    } else if (scaling < -GAMMA) {
-        return ((scaling + GAMMA) * ONE_OVER_DELTA);
+        return ((scaling - GAMMA) / DELTA);
+    } else if (scaling < MINUS_GAMMA) {
+        return ((scaling + GAMMA) / DELTA);
     } else {
         return 0.0f;
     }

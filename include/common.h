@@ -11,6 +11,7 @@
 // Algorithm constants
 #define MU_W 			    0.005
 #define GAMMA 			    0.5
+#define MINUS_GAMMA 	    -0.5
 #define DELTA 			    0.1
 #define ONE_OVER_DELTA 	    10.0
 #define MU_2 			    0.01

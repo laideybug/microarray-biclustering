@@ -8,7 +8,7 @@ EXEPATH=$(dirname "$SCRIPT")
 LIBS="-L ${EXEPATH}/libs"
 INCS="-I ${EXEPATH}/libs/include -I ${EXEPATH}/include"
 #Minimum
-#CFLAGS="-Wall -std=c99 -Os"
+#CFLAGS="-Wall -std=c99"
 #Optimised
 CFLAGS="-Wall -std=c99 -Os -funroll-loops -falign-loops=8 -falign-functions=8"
 
