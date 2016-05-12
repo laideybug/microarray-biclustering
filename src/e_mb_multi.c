@@ -12,7 +12,7 @@ void sync_isr(int x);
 
 int main(void) {
 	unsigned  *done_flag, *inf_clks, *up_clks, *p, i, j, reps, slave_core_addr, out_mem_offset, timer_value_0, timer_value_1;
-	float *wk, *update_wk, *nu_opt, *nu_k, *dest, *scaling_incomplete, *rms_wk_incomplete, *scaling_val, subgrad[WK_ROWS], scaling, rms_wk, rms_wk_reciprocol;
+	float *wk, *update_wk, *nu_opt, *nu_k, *dest, *scaling_incomplete, *rms_wk_incomplete, *scaling_val, subgrad[WK_ROWS], minus_mu_2, minus_mu_2_over_n, mu_w_over_mn, beta_mu_w, nu_k_size, nu_opt_size, scaling, rms_wk, rms_wk_reciprocol;
     volatile float *xt, *nu_k0, *nu_k1, *nu_k2, *scaling_incomplete_k, *rms_wk_incomplete_k;
 #ifdef USE_MASTER_NODE
     unsigned *ready_flag, master_node_addr, done_flag_counter;
@@ -53,6 +53,13 @@ int main(void) {
     // Address of this cores incomplete rms value
     rms_wk_incomplete = (float *)(INC_RMS_MEM_ADDR + e_group_config.core_row * sizeof(float));
 
+    minus_mu_2 = MU_2 * -1.0f;
+    minus_mu_2_over_n = minus_mu_2 / N;
+    mu_w_over_mn = MU_W / M_N;
+    beta_mu_w = BETA * MU_W;
+    nu_k_size = WK_ROWS*sizeof(float);
+    nu_opt_size = (WK_ROWS+1)*sizeof(float);
+
     // Re-enable interrupts
     e_irq_attach(E_SYNC, sync_isr);
     e_irq_mask(E_SYNC, E_FALSE);
@@ -84,7 +91,7 @@ int main(void) {
 
 			for (i = 0; i < WK_ROWS; ++i) {
 				/* subgrad = (nu-xt)*minus_mu_over_N */
-				subgrad[i] = (nu_opt[i] - xt[i]) * -MU_2 * ONE_OVER_N;
+				subgrad[i] = (nu_opt[i] - xt[i]) * minus_mu_2_over_n;
 				/* scaling = (my_W_transpose*nu) */
 				*scaling_incomplete += wk[i] * nu_opt[i];
 			}
@@ -94,7 +101,7 @@ int main(void) {
                 if (j != e_group_config.core_row) {
                     slave_core_addr = (unsigned)e_get_global_address(j, e_group_config.core_col, p);
                     dest = (float *)(slave_core_addr + scaling_incomplete);
-                    e_memcopy(dest, scaling_incomplete, sizeof(float));
+                    e_memcopy(dest, &scaling_incomplete, sizeof(float));
                 }
             }
 
@@ -114,7 +121,7 @@ int main(void) {
 
 			for (i = 0; i < WK_ROWS; ++i) {
 				/* D * diagmat(scaling*my_minus_mu) */
-				nu_k[i] = wk[i] * scaling * -MU_2;
+				nu_k[i] = wk[i] * scaling * minus_mu_2;
 			}
 
 	        // Exchange dual variable estimates along row
@@ -122,7 +129,7 @@ int main(void) {
                 if (j != e_group_config.core_col) {
                     slave_core_addr = (unsigned)e_get_global_address(e_group_config.core_row, j, p);
                     dest = (float *)(slave_core_addr + nu_k);
-                    e_memcopy(dest, nu_k, WK_ROWS*sizeof(float));
+                    e_memcopy(dest, nu_k, nu_k_size);
                 }
             }
 
@@ -135,7 +142,7 @@ int main(void) {
 
 	    	// Average dual variable estimates
 			for (i = 0; i < WK_ROWS; ++i) {
-	            nu_opt[i] += subgrad[i] + ((nu_k0[i] + nu_k1[i] + nu_k2[i]) * ONE_OVER_N);
+	            nu_opt[i] += subgrad[i] + ((nu_k0[i] + nu_k1[i] + nu_k2[i]) / N);
 			}
 		}
 
@@ -156,7 +163,7 @@ int main(void) {
             if (j != e_group_config.core_row) {
                 slave_core_addr = (unsigned)e_get_global_address(j, e_group_config.core_col, p);
                 dest = (float *)(slave_core_addr + scaling_incomplete);
-                e_memcopy(dest, scaling_incomplete, sizeof(float));
+                e_memcopy(dest, &scaling_incomplete, sizeof(float));
             }
         }
 
@@ -183,7 +190,7 @@ int main(void) {
 		for (i = 0; i < WK_ROWS; ++i) {
 			update_wk[i] =  MU_W * nu_opt[i] * scaling;
 			wk[i] += update_wk[i];
-			wk[i] = fmax(fabsf(wk[i])-BETA*MU_W, 0.0f) * sign(wk[i]);
+			wk[i] = fmax(fabsf(wk[i])-beta_mu_w, 0.0f) * sign(wk[i]);
 	        *rms_wk_incomplete += wk[i] * wk[i];
 
 	        // Resetting/initialising the dual variable and update atom
@@ -196,7 +203,7 @@ int main(void) {
             if (j != e_group_config.core_row) {
                 slave_core_addr = (unsigned)e_get_global_address(j, e_group_config.core_col, p);
                 dest = (float *)(slave_core_addr + rms_wk_incomplete);
-                e_memcopy(dest, rms_wk_incomplete, sizeof(float));
+                e_memcopy(dest, &rms_wk_incomplete, sizeof(float));
             }
         }
 
@@ -216,10 +223,10 @@ int main(void) {
 		rms_wk = sqrtf(rms_wk);
 
 		if (rms_wk > 1.0f) {
-            rms_wk_reciprocol = 1.0f / rms_wk;
+            //rms_wk_reciprocol = 1.0f / rms_wk;
 
 			for (i = 0; i < WK_ROWS; ++i) {
-				wk[i] = wk[i] * rms_wk_reciprocol;
+				wk[i] = wk[i] / rms_wk;
 			}
 		}
 
