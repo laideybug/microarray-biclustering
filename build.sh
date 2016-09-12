@@ -40,7 +40,7 @@ ${CROSS_PREFIX}gcc -Wall -std=c99 -Os -c mb-utils/*.c ${INCS}
 ar cr libmb-utils.a *.o
 rm -rf *.o
 
-e-gcc -Wall -std=c99 -Os -c e-lib-extended/*.c ${INCS}
+e-gcc -Wall -std=c99 -Os -c e-lib-extended/*.c ${INCS} -le-lib
 ar cr libe-lib-extended.a *.o
 rm -rf *.o
 
@@ -55,16 +55,16 @@ e-gcc ${CFLAGS} -T ${ELDF} src/e_mb_batch.c src/e_synch.c -o bin/e_mb_batch.elf 
 e-gcc ${CFLAGS} -T ${ELDF} src/e_mb_multi.c src/e_synch.c -o bin/e_mb_multi.elf ${INCS} ${LIBS} -le-lib -le-lib-extended -lm
 
 # Convert agent ebinaries to SREC files
-e-objcopy --srec-forceS3 --output-target srec bin/e_mb.elf bin/e_mb.srec
-e-objcopy --srec-forceS3 --output-target srec bin/e_mb_batch.elf bin/e_mb_batch.srec
-e-objcopy --srec-forceS3 --output-target srec bin/e_mb_multi.elf bin/e_mb_multi.srec
+# e-objcopy --srec-forceS3 --output-target srec bin/e_mb.elf bin/e_mb.srec
+# e-objcopy --srec-forceS3 --output-target srec bin/e_mb_batch.elf bin/e_mb_batch.srec
+# e-objcopy --srec-forceS3 --output-target srec bin/e_mb_multi.elf bin/e_mb_multi.srec
 
 # Build master DEVICE side programs
-e-gcc ${CFLAGS} -T ${ELDF} src/e_mb_master.c -o bin/e_mb_master.elf ${INCS} ${LIBS} -le-lib -le-lib-extended
-e-gcc ${CFLAGS} -T ${ELDF} src/e_mb_batch_master.c -o bin/e_mb_batch_master.elf ${INCS} ${LIBS} -le-lib -le-lib-extended
-e-gcc ${CFLAGS} -T ${ELDF} src/e_mb_multi_master.c -o bin/e_mb_multi_master.elf ${INCS} ${LIBS} -le-lib -le-lib-extended
+e-gcc ${CFLAGS} -T ${ELDF} src/e_mb_master.c -o bin/e_mb_master.elf ${INCS} ${LIBS} -le-lib-extended -le-lib
+#e-gcc ${CFLAGS} -T ${ELDF} src/e_mb_batch_master.c -o bin/e_mb_batch_master.elf ${INCS} ${LIBS} -le-lib-extended -le-lib
+#e-gcc ${CFLAGS} -T ${ELDF} src/e_mb_multi_master.c -o bin/e_mb_multi_master.elf ${INCS} ${LIBS} -le-lib-extended -le-lib
 
 # Convert ebinary to SREC file
-e-objcopy --srec-forceS3 --output-target srec bin/e_mb_master.elf bin/e_mb_master.srec
-e-objcopy --srec-forceS3 --output-target srec bin/e_mb_batch_master.elf bin/e_mb_batch_master.srec
-e-objcopy --srec-forceS3 --output-target srec bin/e_mb_multi_master.elf bin/e_mb_multi_master.srec
+# e-objcopy --srec-forceS3 --output-target srec bin/e_mb_master.elf bin/e_mb_master.srec
+# e-objcopy --srec-forceS3 --output-target srec bin/e_mb_batch_master.elf bin/e_mb_batch_master.srec
+# e-objcopy --srec-forceS3 --output-target srec bin/e_mb_multi_master.elf bin/e_mb_multi_master.srec

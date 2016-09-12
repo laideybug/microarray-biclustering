@@ -45,8 +45,8 @@
 #define BATCH_STARTS		1
 #define BATCH_STARTS_N      3
 #define BATCH_TOGGLE		0
-#define AGENT_BIN_PATH		"e_mb.srec"
-#define MASTER_BIN_PATH		"e_mb_master.srec"
+#define AGENT_BIN_PATH		"e_mb.elf"
+#define MASTER_BIN_PATH		"e_mb_master.elf"
 #define MODE        		"Distributed"
 
 #elif 	defined BATCH_DISTRIBUTED
@@ -62,8 +62,8 @@
 #define BATCH_STARTS		4
 #define BATCH_STARTS_N      12
 #define BATCH_TOGGLE		1
-#define AGENT_BIN_PATH		"e_mb_batch.srec"
-#define MASTER_BIN_PATH		"e_mb_batch_master.srec"
+#define AGENT_BIN_PATH		"e_mb_batch.elf"
+#define MASTER_BIN_PATH		"e_mb_batch_master.elf"
 #define MODE        		"Batch-distributed"
 
 #elif 	defined MULTI_DISTRIBUTED
@@ -79,8 +79,8 @@
 #define BATCH_STARTS		1
 #define BATCH_STARTS_N      3
 #define BATCH_TOGGLE		0
-#define AGENT_BIN_PATH		"e_mb_multi.srec"
-#define MASTER_BIN_PATH		"e_mb_multi_master.srec"
+#define AGENT_BIN_PATH		"e_mb_multi.elf"
+#define MASTER_BIN_PATH		"e_mb_multi_master.elf"
 #define MODE        		"Multi-distributed"
 #endif
 
@@ -90,10 +90,12 @@
 #define MASTER_NODE         0
 #endif
 
+
 #ifdef 	USE_DMA
 #define e_memcopy(dst, src, size) e_dma_copy(dst, src, size)
 #else
 #define e_memcopy(dst, src, size) memcpy(dst, src, size)
 #endif
+
 
 #endif // CONFIG_H_INCLUDED
