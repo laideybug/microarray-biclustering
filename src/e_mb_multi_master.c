@@ -4,13 +4,13 @@
 #include "common.h"
 
 int main(void) {
-	unsigned *all_done_flag, *total_inf_clks, *total_up_clks, *masternode_clks, *p, slave_core_addr, t, j, k, all_ready, inf_clks, up_clks, timer_value_0;
-	volatile unsigned *slave_ready_flag, *slave_inf_clks, *slave_up_clks, *slave_done_counter, slave_done_count;
-	float *xt, *next_sample, *dest, xt_k[WK_ROWS], *slave_scaling_vals, *scaling_vals;;
-	int *sample_no;
-	e_mutex_t *mutex;
+    unsigned *all_done_flag, *total_inf_clks, *total_up_clks, *masternode_clks, *p, slave_core_addr, t, j, k, all_ready, inf_clks, up_clks, timer_value_0;
+    volatile unsigned *slave_ready_flag, *slave_inf_clks, *slave_up_clks, *slave_done_counter, slave_done_count;
+    float *xt, *next_sample, *dest, xt_k[WK_ROWS], *slave_scaling_vals, *scaling_vals;;
+    int *sample_no;
+    e_mutex_t *mutex;
 
-	all_done_flag = (unsigned *)(SHMEM_ADDR + IN_ROWS*IN_COLS*sizeof(float));
+    all_done_flag = (unsigned *)(SHMEM_ADDR + IN_ROWS*IN_COLS*sizeof(float));
     sample_no = (int *)(SHMEM_ADDR + IN_ROWS*IN_COLS*sizeof(float) + sizeof(unsigned));
     total_inf_clks = (unsigned *)(SHMEM_ADDR + IN_ROWS*IN_COLS*sizeof(float) + 2*sizeof(unsigned));
     total_up_clks = (unsigned *)(SHMEM_ADDR + IN_ROWS*IN_COLS*sizeof(float) + 3*sizeof(unsigned));
@@ -49,7 +49,7 @@ int main(void) {
         }
     }
 
-	for (t = 0; t < IN_COLS; ++t) {
+    for (t = 0; t < IN_COLS; ++t) {
         e_ctimer_set(E_CTIMER_0, E_CTIMER_MAX);
         e_ctimer_start(E_CTIMER_0, E_CTIMER_CLK);
 
@@ -102,12 +102,12 @@ int main(void) {
         (*(total_up_clks)) = up_clks;
         (*(masternode_clks)) = timer_value_0;
         (*(sample_no)) = t;
-	}
+    }
 
-	// Raising "done" flag for host
+    // Raising "done" flag for host
     (*(all_done_flag)) = SET_FLAG;
 
-	// Put core in idle state
+    // Put core in idle state
     __asm__ __volatile__("idle");
 
     return EXIT_SUCCESS;

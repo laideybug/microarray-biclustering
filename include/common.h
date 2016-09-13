@@ -9,20 +9,20 @@
 /*==============================================*/
 
 // Algorithm constants
-#define MU_W 			    0.005
-#define GAMMA 			    0.5
+#define MU_W		    0.005
+#define GAMMA		    0.5
 #define MINUS_GAMMA 	    -0.5
-#define DELTA 			    0.1
-#define ONE_OVER_DELTA 	    10.0
-#define MU_2 			    0.01
-#define ALPHA 			    0.0
-#define NUM_ITER 		    2000
-#define ALPHA_W 		    0.0
-#define BETA 			    0.01
+#define DELTA		    0.1
+#define ONE_OVER_DELTA	    10.0
+#define MU_2		    0.01
+#define ALPHA		    0.0
+#define NUM_ITER	    2000
+#define ALPHA_W		    0.0
+#define BETA		    0.01
 #define SET_FLAG            0x00000001
 #define CLEAR_FLAG          0x00000000
-#define DATA_PATH			"../data/data.txt"
-#define OUT_PATH			"../data/dict.dat"
+#define DATA_PATH	    "../data/data.txt"
+#define OUT_PATH	    "../data/dict.dat"
 
 // Core speeds - cycles per second
 #define E_CYCLES            600e6   // 600MHz (Epiphany)
@@ -37,9 +37,9 @@
 #define XT_MEM_ADDR         0x4000
 #define WK_MEM_ADDR         0x4230
 #define UP_WK_MEM_ADDR      0x4460
-#define NU_K0_MEM_ADDR  	0x4690
-#define NU_K1_MEM_ADDR  	0x4920
-#define NU_K2_MEM_ADDR  	0x5150
+#define NU_K0_MEM_ADDR	    0x4690
+#define NU_K1_MEM_ADDR	    0x4920
+#define NU_K2_MEM_ADDR	    0x5150
 #define NU_OPT_K0_MEM_ADDR  0x5380
 #define NU_OPT_K1_MEM_ADDR  0x5610  // Only used in BATCH_DISTRIBUTED mode
 #define NU_OPT_K2_MEM_ADDR  0x5840  // Only used in BATCH_DISTRIBUTED mode
@@ -49,7 +49,7 @@
 #define NU_MEM_OFFSET       0x0230
 
 // Master node macros and addresses
-#define MASTER_BENCH_NUM    17		// The max number of benchmark values returned by the master node
+#define MASTER_BENCH_NUM    17	    // The max number of benchmark values returned by the master node
 #define MASTER_XT_MEM_ADDR  0x4000
 #define INF_CLKS_MEM_ADDR   0x5000
 #define UP_CLKS_MEM_ADDR    0x5100

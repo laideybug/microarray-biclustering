@@ -4,7 +4,7 @@
 #include <string.h>
 #include "_e_lib_extended.h"
 #include "common.h"
-#include "e_synch.h"
+#include "e_sync.h"
 
 float adjust_scaling(float scaling);
 float sign(float value);
@@ -102,7 +102,11 @@ int main(void) {
                 if (j != e_group_config.core_col) {
                     slave_core_addr = (unsigned)e_get_global_address(e_group_config.core_row, j, p);
                     dest = (float *)(slave_core_addr + nu_k);
-                    e_memcopy(dest, nu_k, nu_k_size);
+
+                    for (i = 0; i < WK_ROWS; ++i) {
+                        dest[i] = nu_k[i];
+                    }
+                    //e_memcopy(dest, nu_k, nu_k_size);
                 }
             }
 
