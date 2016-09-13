@@ -1,6 +1,11 @@
-# Distributed Microarray Biclustering Implementation for Parallella-16 Microserver #
+# Distributed Dictionary Learning Implementation for Parallella-16 Microserver #
 
-This project is a distributed dictionary learning.
+This project is a distributed dictionary learning. The subjects are classified into four lung cancer categories:
+
+* Normal: Subjects without cancer
+* Carcinoid: Patients with pulmonary carcinoid tumours
+* Colon: Patients with colon metastases
+* SmallCell: Patients with small-cell carcinoma
 
 This project contains the following components:
 
