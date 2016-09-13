@@ -11,6 +11,8 @@ The input dataset for this experiment consists of 12625 gene expression levels t
 
 The data is presented as a 56 x 12,625 matrix found in *data.txt*. The rows represent the patients grouped together by their classification, while the columns represent their corresponding gene expression levels.
 
+### Project structure ###
+
 This project contains the following components:
 
     data/                - where input and output data are stored
