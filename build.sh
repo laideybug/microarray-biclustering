@@ -50,9 +50,9 @@ cd ..
 ${CROSS_PREFIX}gcc -Wall -std=c99 -O3 src/microarray_biclustering.c -o bin/microarray_biclustering.elf ${EINCS} ${ELIBS} ${INCS} ${LIBS} -le-hal -le-loader -lmb-utils -lm
 
 # Build agent DEVICE side programs
-e-gcc ${CFLAGS} -T ${ELDF} src/e_mb.c src/e_synch.c -o bin/e_mb.elf ${INCS} ${LIBS} -le-lib -le-lib-extended -lm
-e-gcc ${CFLAGS} -T ${ELDF} src/e_mb_batch.c src/e_synch.c -o bin/e_mb_batch.elf ${INCS} ${LIBS} -le-lib -le-lib-extended -lm
-e-gcc ${CFLAGS} -T ${ELDF} src/e_mb_multi.c src/e_synch.c -o bin/e_mb_multi.elf ${INCS} ${LIBS} -le-lib -le-lib-extended -lm
+e-gcc ${CFLAGS} -T ${ELDF} src/e_mb.c src/e_sync.c -o bin/e_mb.elf ${INCS} ${LIBS} -le-lib -le-lib-extended -lm
+e-gcc ${CFLAGS} -T ${ELDF} src/e_mb_batch.c src/e_sync.c -o bin/e_mb_batch.elf ${INCS} ${LIBS} -le-lib -le-lib-extended -lm
+e-gcc ${CFLAGS} -T ${ELDF} src/e_mb_multi.c src/e_sync.c -o bin/e_mb_multi.elf ${INCS} ${LIBS} -le-lib -le-lib-extended -lm
 
 # Convert agent ebinaries to SREC files
 e-objcopy --srec-forceS3 --output-target srec bin/e_mb.elf bin/e_mb.srec
