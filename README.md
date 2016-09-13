@@ -5,7 +5,7 @@ This project is a multi-core implementation of a distributed dictionary learning
 * Epiphany E16G301 many-core architecture
 * Epiphany SDK v2015.1
 
-The input dataset for this experiment consists of 12625 gene expression levels taken from a sample of 56 subjects. The subjects are classified into four lung cancer categories:
+The input dataset for this experiment consists of 12,625 gene expression levels taken from a sample of 56 subjects. The subjects are classified into four lung cancer categories:
 
 * **Normal**: Subjects without cancer
 * **Carcinoid**: Patients with pulmonary carcinoid tumours
