@@ -12,7 +12,7 @@ void sync_isr(int x);
 
 int main(void) {
     unsigned  *done_flag, *inf_clks, *up_clks, *p, i, j, reps, slave_core_addr, out_mem_offset, timer_value_0, timer_value_1;
-    float *wk, *update_wk, *nu_opt, *nu_k, *dest, *scaling_incomplete, *rms_wk_incomplete, *scaling_val, subgrad[WK_ROWS], minus_mu_2, minus_mu_2_over_n, mu_w_over_mn, beta_mu_w, nu_k_size, nu_opt_size, scaling, rms_wk, rms_wk_reciprocol;
+    float *wk, *update_wk, *nu_opt, *nu_k, *dest, *scaling_incomplete, *rms_wk_incomplete, *scaling_val, subgrad[WK_ROWS], minus_mu_2, minus_mu_2_over_n, beta_mu_w, nu_k_size, scaling, rms_wk;
     volatile float *xt, *nu_k0, *nu_k1, *nu_k2, *scaling_incomplete_k, *rms_wk_incomplete_k;
 #ifdef USE_MASTER_NODE
     unsigned *ready_flag, master_node_addr, done_flag_counter;
@@ -55,10 +55,8 @@ int main(void) {
 
     minus_mu_2 = MU_2 * -1.0f;
     minus_mu_2_over_n = minus_mu_2 / N;
-    mu_w_over_mn = MU_W / M_N;
     beta_mu_w = BETA * MU_W;
     nu_k_size = WK_ROWS*sizeof(float);
-    nu_opt_size = (WK_ROWS+1)*sizeof(float);
 
     // Re-enable interrupts
     e_irq_attach(E_SYNC, sync_isr);
@@ -223,8 +221,6 @@ int main(void) {
 	rms_wk = sqrtf(rms_wk);
 
 	if (rms_wk > 1.0f) {
-            //rms_wk_reciprocol = 1.0f / rms_wk;
-
 	    for (i = 0; i < WK_ROWS; ++i) {
 		wk[i] = wk[i] / rms_wk;
 	    }

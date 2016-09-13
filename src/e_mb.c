@@ -12,7 +12,7 @@ void sync_isr(int x);
 
 int main(void) {
     unsigned *inf_clks, *up_clks, *done_flag, *p, i, j, reps, slave_core_addr, out_mem_offset, timer_value_0, timer_value_1;
-    float *wk, *update_wk, *nu_opt, *nu_k, *dest, *scaling_val, minus_mu_2, minus_mu_2_over_n, beta_mu_w, mu_w_scaling, minus_mu_2_scaling, subgrad[WK_ROWS], scaling, rms_wk, rms_wk_reciprocol;
+    float *wk, *update_wk, *nu_opt, *nu_k, *dest, *scaling_val, minus_mu_2, minus_mu_2_over_n, beta_mu_w, mu_w_scaling, minus_mu_2_scaling, subgrad[WK_ROWS], scaling, rms_wk;
     volatile float *xt, *nu_k0, *nu_k1, *nu_k2;
     size_t nu_k_size;
 #ifdef USE_MASTER_NODE
@@ -102,11 +102,7 @@ int main(void) {
                 if (j != e_group_config.core_col) {
                     slave_core_addr = (unsigned)e_get_global_address(e_group_config.core_row, j, p);
                     dest = (float *)(slave_core_addr + nu_k);
-
-                    for (i = 0; i < WK_ROWS; ++i) {
-                        dest[i] = nu_k[i];
-                    }
-                    //e_memcopy(dest, nu_k, nu_k_size);
+                    e_memcopy(dest, nu_k, nu_k_size);
                 }
             }
 

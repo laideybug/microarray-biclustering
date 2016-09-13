@@ -20,14 +20,18 @@ int cmp(const void *a, const void *b);
 int main(int argc, char *argv[]) {
     unsigned current_row, current_col, i, j, k, all_done, avg_inf_clks, avg_up_clks, total_inf_clks, total_up_clks, clr;
     float xt[IN_ROWS], input_data[IN_ROWS][IN_COLS], dictionary_w[IN_ROWS][N], dictionary_wk[IN_ROWS], dictionary_wk_i[WK_ROWS], output_dict[IN_ROWS][N], update_wk[WK_ROWS], dual_var[WK_ROWS], scaling_matrix[N][IN_COLS], scaling_k[IN_COLS], scaling_vals[BATCH_STARTS_N], data_point, secs, t_reciprocol;
-    int t, batch_starts, batch_toggle;
+    int t, batch_starts;
     struct fl_ind norms[N];
     FILE *input_file, *output_file;
 #ifdef USE_MASTER_NODE
     unsigned masternode_clks;
     int previous_t;
+#ifdef BATCH_DISTRIBUTED
+    int batch_toggle;
+#endif
 #else
     unsigned done[M_N], inf_clks, up_clks;
+    int batch_toggle;
 #ifndef BATCH_DISTRIBUTED
     float xt_k[WK_ROWS];
 #endif
@@ -75,15 +79,7 @@ int main(int argc, char *argv[]) {
     mb_fill_matrix_random(IN_ROWS, N, dictionary_w);
     mb_scalar_multiply(IN_ROWS, N, dictionary_w, 10.0f);
     mb_norm_matrix(IN_ROWS, N, dictionary_w);
-/*
-    for (j = 0; j < IN_ROWS; ++j) {
-        for (k = 0; k < N; ++k) {
-            printf("%f ", dictionary_w[j][k]);
-        }
 
-        printf("\n");
-    }
-*/
     printf("Initialising network...\n");
 
     // Epiphany setup
@@ -375,13 +371,6 @@ int main(int argc, char *argv[]) {
 
     for (i = 0; i < N; ++i) {
         mb_get_matrix_row(N, IN_COLS, i, scaling_matrix, scaling_k);
-/*
-        for (j = 0; j < 1; ++j) {
-            printf("%f ", scaling_k[j]);
-        }
-
-        printf("\n\n");
-*/
         norms[i].value = mb_norm_vector(IN_COLS, scaling_k);
         norms[i].index = i;
     }
@@ -393,15 +382,7 @@ int main(int argc, char *argv[]) {
             output_dict[j][k] = dictionary_w[j][norms[k].index];
         }
     }
-/*
-    for (j = 0; j < IN_ROWS; ++j) {
-        for (k = 0; k < N; ++k) {
-            printf("%f ", dictionary_w[j][k]);
-        }
 
-        printf("\n");
-    }
-*/
     // Output data to .dat file here
     output_file = fopen(OUT_PATH, "wb+");
 
@@ -460,4 +441,3 @@ int cmp(const void *a, const void *b) {
 
     return 0;
 }
-
