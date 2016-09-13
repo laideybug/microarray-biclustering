@@ -4,32 +4,14 @@ This project is a distributed dictionary learning.
 
 This project contains the following components:
 
-    data/
-        data.txt
+    data/                - where input and output data are stored
+    include/             - the project header files
+    libs/                - where additional project libraries are stored
+    src/                 - the source files
 
-    include/
-        common.h
-        config.h
-        e_sync.h
-
-    libs/
-        e-lib-extended/
-        include/
-        mb-utils/
-
-    src/
-        e_mb.c
-        e_mb_batch.c
-        e_mb_batch_master.c
-        e_mb_master.c
-        e_mb_multi.c
-        e_mb_multi_master.c
-        e_sync.c
-        microarray_biclustering.c
-
-    build.sh
-    run.sh
-    plot.sh
+    build.sh             - shell script for building the project
+    run.sh               - shell script for running the project
+    plot.sh              - shell script for plotting the learned dictionary with Gnuplot
 
 ### Building the project ###
 
