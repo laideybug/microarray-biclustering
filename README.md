@@ -1,11 +1,15 @@
 # Distributed Dictionary Learning Implementation for Parallella-16 Microserver #
 
-This project is a distributed dictionary learning. The subjects are classified into four lung cancer categories:
+This project is a multi-core implementation of a distributed dictionary learning algorithm.
+
+The input dataset for this experiment consists of 12625 gene expression levels taken from a sample of 56 subjects. The subjects are classified into four lung cancer categories:
 
 * **Normal**: Subjects without cancer
 * **Carcinoid**: Patients with pulmonary carcinoid tumours
 * **Colon**: Patients with colon metastases
 * **SmallCell**: Patients with small-cell carcinoma
+
+The data is presented as a 56 x 12,625 matrix found in *data.txt*. The rows represent the patients grouped together by their classification, while the columns represent their corresponding gene expression levels.
 
 This project contains the following components:
 
