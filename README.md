@@ -1,6 +1,6 @@
 # Multicore Distributed Dictionary Learning: A Microarray Gene Expression Biclustering Case Study #
 
-This project is an experimental study of a distributed machine learning technique on a multi-core platform. The project was developed for:
+This project is an experimental study of a distributed machine learning technique on a multi-core platform. The project is written in C and was developed for:
 
 * Epiphany E16G301 many-core architecture
 * Parallella SDK v2015.1
