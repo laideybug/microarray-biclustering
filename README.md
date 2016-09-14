@@ -5,6 +5,8 @@ This project is a multi-core implementation of a distributed dictionary learning
 * Epiphany E16G301 many-core architecture
 * Epiphany SDK v2015.1
 
+### Overview ###
+
 The input dataset for this experiment consists of 12,625 gene expression levels taken from a sample of 56 subjects. The subjects are classified into four lung cancer categories:
 
 * **Normal**: Subjects without cancer
@@ -14,8 +16,9 @@ The input dataset for this experiment consists of 12,625 gene expression levels 
 
 The data is presented as a 56 x 12,625 matrix found in *data.txt*. The rows represent the patients grouped together by their classification, while the columns represent their corresponding gene expression levels.
 
-This experiment is an unsupervised machine learning task in that the Epiphany cores are unaware of the ground truth of the classification of each patient. The ultimate aim, however, is to group patients with similar genetic information into *clusters*. Once the process is completed, different coloured markers are applied to each subject for identification and evaluation on the plotted graph. 
-This algorithm is a decentralised online algorithm in that the Epiphany cores are exposed to each column of the cancer data matrix once in a streaming manner.
+This experiment is an unsupervised machine learning task in that the Epiphany cores (eCores) are unaware of the ground truth of the classification of each patient. The ultimate aim, however, is for the eCores to learn the  group patients with similar genetic information into *clusters*. Once the process is completed, different coloured markers are applied to each subject for identification and evaluation on the plotted graph.
+
+This algorithm is a decentralised online algorithm in that the eCores are exposed to each column of the cancer data matrix once in a streaming manner.
 
 ### Project structure ###
 
