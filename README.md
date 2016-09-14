@@ -39,8 +39,14 @@ Switch between modes by altering the *config.h* file and rebuilding the project 
 This project contains the following components:
 
     data/                - where input and output data are stored
+    
     include/             - the project header files
+    
     libs/                - where additional project libraries are stored
+        e-lib-extended/  - a custom library that extends a number of the eSDK functions
+        include/         - the external library header files
+        mb-utils/        - a custom math library for working with the vectors in the project
+    
     src/                 - the source files
 
     build.sh             - shell script for building the project
