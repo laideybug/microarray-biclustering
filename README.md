@@ -26,11 +26,11 @@ This experiment is an unsupervised machine learning task in that the eCores are 
 
 Two fully-realised implementations are included in the project - **Distributed** and **Batch-distributed**. A third, **incomplete** implementation is also included, called **Multi-distributed**.
 
-The *distributed* implementation separates the randomly initialised dictionary *W* into three atoms, one per column, with the learning process associated with each atom undertaken by a single eCore.
+* The *distributed* implementation separates the randomly initialised dictionary *W* into three atoms, one per column, with the learning process associated with each atom undertaken by a single eCore.
 
-The *batch-distributed* realisation builds on the distributed version. In this case the dictionary *W* is again subdivided into three atoms but multiple input samples are processed in batch mode. In this case, a (4, 3) workgroup is used, with element (i, j) hosting atom *W*j . Specifically - each row of the workgroup processes atoms from a single sub-group as previously, but in this case four rows are used to process four input samples concurrently.
+* The *batch-distributed* realisation builds on the distributed version. In this case the dictionary *W* is again subdivided into three atoms but multiple input samples are processed in batch mode. In this case, a (4, 3) workgroup is used, with element (i, j) hosting atom *W*j . Specifically - each row of the workgroup processes atoms from a single sub-group as previously, but in this case four rows are used to process four input samples concurrently.
 
-The *multi-distributed* version attempts to expand the *distributed* technique across twelve cores instead of three in order to reduce the amount of work each core is required to perform for each input sample. Work on this implementation is ongoing.
+* The *multi-distributed* version attempts to expand the *distributed* technique across twelve cores instead of three in order to reduce the amount of work each core is required to perform for each input sample. Work on this implementation is ongoing.
 
 Switch between modes by altering the *config.h* file and rebuilding the project before running.
 
