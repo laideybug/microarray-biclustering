@@ -3,7 +3,9 @@
 This project is an experimental study of a distributed machine learning technique on a multi-core platform. The project was developed for:
 
 * Epiphany E16G301 many-core architecture
-* Epiphany SDK v2015.1
+* Parallella SDK v2015.1
+
+**N.B.** The project has not been tested on SDKs later than v2015.1.
 
 ### Introduction ###
 
@@ -52,6 +54,12 @@ This project contains the following components:
     build.sh             - shell script for building the project
     run.sh               - shell script for running the project
     plot.sh              - shell script for plotting the learned dictionary with Gnuplot
+
+### Setting up the project ###
+
+Choose the implementation to run by commenting out the appropriate options in *include/config.h*.
+
+![Screen Shot 2016-09-14 at 12.45.03.png](https://bitbucket.org/repo/pGG55g/images/3344862315-Screen%20Shot%202016-09-14%20at%2012.45.03.png)
 
 ### Building the project ###
 
