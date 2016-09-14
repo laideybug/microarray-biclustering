@@ -24,7 +24,7 @@ This experiment is an unsupervised machine learning task in that the eCores are 
 
 ### Modes ###
 
-Two fully-realised implementations are included in the project - **Distributed** and **Batch-distributed**. A third, **incomplete** implementation is also included, called *Multi-distributed*.
+Two fully-realised implementations are included in the project - **Distributed** and **Batch-distributed**. A third, **incomplete** implementation is also included, called **Multi-distributed**.
 
 The *distributed* implementation separates the randomly initialised dictionary *W* into three atoms, one per column, with the learning process associated with each atom undertaken by a single eCore.
 
