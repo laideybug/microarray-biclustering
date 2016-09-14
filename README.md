@@ -59,7 +59,18 @@ This project contains the following components:
 
 Choose the implementation to run by commenting out the appropriate options in *include/config.h*.
 
-![Screen Shot 2016-09-14 at 12.45.03.png](https://bitbucket.org/repo/pGG55g/images/3344862315-Screen%20Shot%202016-09-14%20at%2012.45.03.png)
+    /*==============================================*/
+    /*=============Configuration Modes==============*/
+    /*==============================================*/
+
+    // Algorithm modes - CHOOSE ONE, comment out the rest
+    #define DISTRIBUTED
+    //#define BATCH_DISTRIBUTED
+    //#define MULTI_DISTRIBUTED
+
+    // Network configuration options - comment out as needed
+    #define USE_MASTER_NODE
+    #define USE_DMA
 
 ### Building the project ###
 
