@@ -7,6 +7,8 @@ This project is an experimental study of a distributed machine learning techniqu
 
 **N.B.** The project has not been tested on SDKs later than v2015.1.
 
+The ICASSP 2017 research paper relating to this work can be read here: https://bit.ly/36nMzRI
+
 ### Introduction ###
 
 Current machine learning algorithms are highly centralised, with a large number of processing agents, distributed across parallel processing resources, accessing a single, very large data object. This creates bottlenecks as a result of limited memory access rates. Distributed learning has the potential to resolve this problem by employing networks of co-operating agents each operating on subsets of the data, but as yet their suitability for realisation on parallel architectures such as multicore are unknown. This project presents the deployment of a distributed dictionary learning algorithm for microarray gene expression bi-clustering on a 16-core Epiphany multicore.
